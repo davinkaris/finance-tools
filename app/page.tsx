@@ -1,15 +1,10 @@
 import Link from "next/link";
+import Navbar from "../components/Navbar";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <header className="border-b border-slate-200">
-        <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 md:px-10">
-          <div className="text-xl font-bold tracking-tight text-[#1B4332]">
-            FinanceTools
-          </div>
-        </nav>
-      </header>
+      <Navbar />
 
       <main className="mx-auto flex w-full max-w-6xl flex-1 items-center px-6 py-20 md:px-10 md:py-28">
         <section className="max-w-3xl space-y-8">

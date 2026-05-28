@@ -1,13 +1,88 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Navbar from "../../components/Navbar";
+import { getAccounts } from "../../lib/accounts";
+import { loadCategoryRules } from "../../lib/categoryRules";
+import { loadNotesRules } from "../../lib/notesRules";
+import { syncNotesFromTransactions } from "../../lib/transactionNotes";
+import {
+  detectMoveMoney,
+  detectPayBill,
+} from "../../lib/transactionMatching";
+import { deduplicateTransactions } from "../../lib/transactions";
+import { addUploadHistoryEntry } from "../../lib/uploadHistory";
+
+const STAGES = [
+  { label: "Membaca bank statement...", progress: 25 },
+  { label: "Menganalisa transaksi...", progress: 50 },
+  { label: "Mengkategorisasi pengeluaran...", progress: 75 },
+  { label: "Membuat insight keuangan...", progress: 90 },
+  { label: "Selesai!", progress: 100 },
+];
 
 export default function UploadPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-white text-slate-900">
+          <Navbar />
+          <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-6 py-20">
+            <p className="text-sm text-slate-500">Memuat...</p>
+          </main>
+        </div>
+      }
+    >
+      <UploadPageContent />
+    </Suspense>
+  );
+}
+
+function UploadPageContent() {
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [stageLabel, setStageLabel] = useState("");
   const fileInputRef = useRef(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedAccountId = searchParams.get("accountId");
+
+  useEffect(() => {
+    const loadedAccounts = getAccounts();
+    setAccounts(loadedAccounts);
+
+    if (
+      preselectedAccountId &&
+      loadedAccounts.some((account) => account.id === preselectedAccountId)
+    ) {
+      setSelectedAccountId(preselectedAccountId);
+    }
+  }, [preselectedAccountId]);
+
+  const selectedAccount = accounts.find(
+    (account) => account.id === selectedAccountId,
+  );
+  const isPreselected =
+    Boolean(preselectedAccountId) &&
+    accounts.some((account) => account.id === preselectedAccountId);
+  const canAnalyze = Boolean(selectedFile && selectedAccountId && !isLoading);
+
+  const setStage = (index) => {
+    const stage = STAGES[index];
+    if (!stage) return;
+    setProgressPercent(stage.progress);
+    setStageLabel(stage.label);
+  };
+
+  const resetProgress = () => {
+    setProgressPercent(0);
+    setStageLabel("");
+  };
 
   const handlePickFile = () => {
     fileInputRef.current?.click();
@@ -44,42 +119,112 @@ export default function UploadPage() {
     setPdfFile(file);
   };
 
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleAnalyze = async () => {
-    if (!selectedFile || isLoading) return;
+    if (!selectedFile || !selectedAccountId || isLoading) return;
 
     setIsLoading(true);
+    setStage(0);
 
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
+      formData.append("accountId", selectedAccountId);
+      const categoryRules = loadCategoryRules();
+      formData.append("categoryRules", JSON.stringify(categoryRules));
+      const savedNotesRules = loadNotesRules();
+      if (savedNotesRules.length > 0) {
+        formData.append("notesRules", JSON.stringify(savedNotesRules));
+      }
 
       const response = await fetch("/api/parse-statement", {
         method: "POST",
         body: formData,
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result?.error || "Gagal menganalisa statement.");
+        const errorResult = await response.json();
+        throw new Error(errorResult?.error || "Gagal menganalisa statement.");
       }
 
+      setStage(1);
+
+      const result = await response.json();
+      setStage(2);
+
       if (typeof window !== "undefined") {
+        const newTransactions = result.transactions || [];
+
+        const existing = JSON.parse(
+          localStorage.getItem("parsedTransactions") || "[]",
+        );
+        const { uniqueNew: uniqueNewTransactions, duplicateCount } =
+          deduplicateTransactions(existing, newTransactions);
+
+        syncNotesFromTransactions(uniqueNewTransactions);
+        const merged = [...existing, ...uniqueNewTransactions];
+
+        const accountList = getAccounts();
+        const moveResult = detectMoveMoney(merged, accountList);
+        const billResult = detectPayBill(moveResult.transactions, accountList);
+
         localStorage.setItem(
           "parsedTransactions",
-          JSON.stringify(result.transactions || []),
+          JSON.stringify(billResult.transactions),
         );
         localStorage.setItem(
           "aiInsights",
           JSON.stringify(result.insights || []),
         );
+
+        addUploadHistoryEntry({
+          accountId: selectedAccountId,
+          fileName: selectedFile.name,
+          transactions:
+            uniqueNewTransactions.length > 0
+              ? uniqueNewTransactions
+              : newTransactions,
+          transactionCount: uniqueNewTransactions.length,
+        });
+
+        localStorage.setItem(
+          "uploadNotification",
+          JSON.stringify({
+            transactionCount: uniqueNewTransactions.length,
+            duplicateCount,
+            accountName: selectedAccount?.nama || "Akun",
+            moveMoneyCount: moveResult.matches.length,
+            payBillCount: billResult.matches.length,
+          }),
+        );
+
+        const autoAppliedCount = Number(result.autoAppliedCount || 0);
+        if (autoAppliedCount > 0) {
+          localStorage.setItem(
+            "autoCategoryNotification",
+            String(autoAppliedCount),
+          );
+        } else {
+          localStorage.removeItem("autoCategoryNotification");
+        }
       }
 
+      setStage(3);
+      setStage(4);
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
       router.push("/dashboard");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Terjadi kesalahan.";
       alert(message);
+      resetProgress();
     } finally {
       setIsLoading(false);
     }
@@ -87,13 +232,7 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      <header className="border-b border-slate-200">
-        <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 md:px-10">
-          <div className="text-xl font-bold tracking-tight text-[#1B4332]">
-            FinanceTools
-          </div>
-        </nav>
-      </header>
+      <Navbar />
 
       <main className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-16 md:px-10 md:py-20">
         <section className="w-full text-center">
@@ -104,6 +243,92 @@ export default function UploadPage() {
             Mendukung semua bank Indonesia: BCA, Mandiri, BRI, BNI, CIMB, dan
             lainnya. Format PDF, maksimal 3 bulan terakhir
           </p>
+
+          <div className="mx-auto mt-10 w-full max-w-2xl text-left">
+            <h2 className="text-lg font-bold text-[#1B4332]">Pilih Akun</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {isPreselected
+                ? "Statement akan diupload ke akun ini"
+                : "Statement ini dari akun mana?"}
+            </p>
+
+            {accounts.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
+                <p className="text-sm text-slate-600">
+                  Belum ada akun. Tambah akun dulu sebelum upload.
+                </p>
+                <Link
+                  href="/accounts"
+                  className="mt-4 inline-flex items-center rounded-full bg-[#1B4332] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                >
+                  Tambah Akun
+                </Link>
+              </div>
+            ) : isPreselected && selectedAccount ? (
+              <div
+                className="mt-4 flex items-center gap-3 rounded-xl border-2 px-4 py-3"
+                style={{
+                  borderColor: selectedAccount.warna || "#1B4332",
+                  backgroundColor: `${selectedAccount.warna || "#1B4332"}0d`,
+                }}
+              >
+                <span
+                  className="h-4 w-4 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: selectedAccount.warna || "#1B4332",
+                  }}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-slate-900">
+                    {selectedAccount.nama}
+                  </span>
+                  <span className="block truncate text-sm text-slate-500">
+                    {selectedAccount.bank}
+                  </span>
+                </span>
+                <Link
+                  href="/upload"
+                  className="shrink-0 text-sm font-semibold text-[#1B4332] underline-offset-2 hover:underline"
+                >
+                  Ganti akun
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {accounts.map((account) => {
+                  const isSelected = selectedAccountId === account.id;
+                  return (
+                    <button
+                      key={account.id}
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => setSelectedAccountId(account.id)}
+                      className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                        isSelected
+                          ? "border-[#1B4332] bg-[#1B4332]/5"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <span
+                        className="h-4 w-4 shrink-0 rounded-full"
+                        style={{ backgroundColor: account.warna || "#1B4332" }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-slate-900">
+                          {account.nama}
+                        </span>
+                        <span className="block truncate text-sm text-slate-500">
+                          {account.bank}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           <div className="mx-auto mt-10 flex w-full max-w-2xl flex-col items-center rounded-2xl border-2 border-dashed border-[#1B4332]/35 bg-[#1B4332]/5 px-6 py-14">
             <input
@@ -139,15 +364,27 @@ export default function UploadPage() {
               </p>
 
               {selectedFile ? (
-                <p className="mt-2 max-w-md truncate text-sm text-slate-600">
-                  File dipilih: {selectedFile.name}
-                </p>
+                <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#1B4332]/30 bg-white px-4 py-2 text-sm font-medium text-slate-700">
+                  <span className="truncate">
+                    📄 {selectedFile.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRemoveFile}
+                    disabled={isLoading}
+                    className="shrink-0 rounded-full px-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Hapus file"
+                  >
+                    ✕
+                  </button>
+                </div>
               ) : null}
 
               <button
                 type="button"
                 onClick={handlePickFile}
-                className="mt-6 inline-flex items-center rounded-full border border-[#1B4332] px-6 py-3 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white"
+                disabled={isLoading}
+                className="mt-6 inline-flex items-center rounded-full border border-[#1B4332] px-6 py-3 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Pilih File
               </button>
@@ -157,15 +394,30 @@ export default function UploadPage() {
           <button
             type="button"
             onClick={handleAnalyze}
-            disabled={!selectedFile || isLoading}
+            disabled={!canAnalyze}
             className={`mt-8 inline-flex items-center rounded-full px-7 py-3.5 text-base font-semibold transition ${
-              selectedFile && !isLoading
+              canAnalyze
                 ? "bg-[#1B4332] text-white hover:bg-[#163728]"
                 : "cursor-not-allowed bg-slate-300 text-slate-500"
             }`}
           >
             {isLoading ? "Sedang menganalisa..." : "Analisa Sekarang"}
           </button>
+
+          {isLoading ? (
+            <div className="mx-auto mt-6 w-full max-w-md">
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-[#1B4332] transition-all duration-700 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="mt-3 text-sm font-medium text-[#1B4332] transition-opacity duration-300">
+                {stageLabel}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">{progressPercent}%</p>
+            </div>
+          ) : null}
         </section>
       </main>
     </div>

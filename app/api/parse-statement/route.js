@@ -1,3 +1,11 @@
+import { applyCategoryRulesWithCount } from "../../../lib/categoryRules";
+import { applyNotesRulesWithCount } from "../../../lib/notesRules";
+import {
+  buildIncomeCategoryNames,
+  inferJenisFromAmounts,
+  processTransaction,
+} from "../../../lib/transactionJenis";
+
 export async function POST(request) {
   const parseAmount = (value) => {
     if (value === null || value === undefined) return 0
@@ -63,6 +71,9 @@ export async function POST(request) {
     const apiKey = process.env.ANTHROPIC_API_KEY
     const formData = await request.formData()
     const file = formData.get("file")
+    const accountId = formData.get("accountId")
+      ? String(formData.get("accountId"))
+      : null
     const bytes = await file.arrayBuffer()
     const base64Data = Buffer.from(bytes).toString("base64")
 
@@ -114,49 +125,90 @@ export async function POST(request) {
     const transactions = JSON.parse(clean)
     console.log("Parsed transactions:", transactions.length)
 
-    const categorizationPrompt = `Kategorisasi setiap transaksi dengan rules berikut:
+    const transactionsWithJenis = transactions.map((t) => ({
+      ...t,
+      jenis: inferJenisFromAmounts(t.debit, t.kredit),
+    }))
 
-GAJI & PEMASUKAN: transaksi yang mengandung kata 
-Payroll, Salary, Gaji, THR, Bonus, Income, 
-Transfer Masuk dari perusahaan, atau kredit besar 
-yang rutin setiap bulan
+    const categorizationPrompt = `Kategorisasi setiap transaksi bank Indonesia.
 
-TRANSFER: transfer antar rekening pribadi, 
-top up e-wallet (OVO, GoPay, Dana, ShopeePay), 
-transfer ke nama orang
+CONTOH KATEGORISASI YANG BENAR:
+Transaksi → Kategori
 
-MAKANAN & MINUMAN: restoran, kafe, GoFood, 
-GrabFood, ShopeeFood, warung, supermarket
+GAJI & PEMASUKAN:
+- 'Payroll from [perusahaan]' → Gaji & Pemasukan
+- 'SALARY [nama]' → Gaji & Pemasukan
+- 'THR [nama]' → Gaji & Pemasukan
+- 'Kredit dari [perusahaan]' nominal besar rutin → Gaji & Pemasukan
+- 'Referral Bonus' → Gaji & Pemasukan
+- 'Cashback' → Gaji & Pemasukan
+- 'Interest' atau 'Bunga' → Gaji & Pemasukan
+- 'Jagoan Adventure Cashback' → Gaji & Pemasukan
 
-TRANSPORT: Grab, Gojek, Taxi, Parkir, BBM, 
-Pertamina, toll
+TRANSFER:
+- 'Outgoing Transfer [nama orang]' → Transfer
+- 'Transfer ke [nama]' → Transfer
+- 'Kirim ke [nama]' → Transfer
+- 'SWIFT Transfer' → Transfer
 
-TAGIHAN & UTILITAS: listrik, air, PLN, PDAM, 
-internet, telepon, asuransi, cicilan
+TAGIHAN & UTILITAS:
+- 'PLN' atau 'Listrik' → Tagihan & Utilitas
+- 'PDAM' atau 'Air' → Tagihan & Utilitas
+- 'Telkom' atau 'Internet' → Tagihan & Utilitas
+- 'Insurance' atau 'Asuransi' → Tagihan & Utilitas
+- 'BPJS' → Tagihan & Utilitas
+- 'Netflix' → Tagihan & Utilitas
+- 'Spotify' → Tagihan & Utilitas
+- 'Top Up' OVO/GoPay/Dana → Tagihan & Utilitas
 
-SHOPPING: marketplace, Tokopedia, Shopee, 
-Lazada, retail, fashion
+MAKANAN & MINUMAN:
+- 'GoFood' atau 'GrabFood' atau 'ShopeeFood' → Makanan & Minuman
+- 'KFC', 'McD', 'McDonald' → Makanan & Minuman
+- 'Indomaret', 'Alfamart' → Makanan & Minuman
+- 'Kopi', 'Coffee', 'Cafe' → Makanan & Minuman
+- 'Restaurant', 'Resto', 'Warung' → Makanan & Minuman
 
-INVESTASI: reksa dana, saham, deposito, 
-Bibit, Ajaib, bank transfer ke investasi
+TRANSPORT:
+- 'Grab' (bukan GrabFood) → Transport
+- 'Gojek' (bukan GoFood) → Transport
+- 'Parkir' → Transport
+- 'Toll' atau 'Tol' → Transport
+- 'BBM' atau 'Pertamina' atau 'Shell' → Transport
+- 'KAI' atau 'Kereta' → Transport
+- 'Transjakarta' → Transport
 
-HIBURAN: Netflix, Spotify, game, bioskop
+SHOPPING:
+- 'Tokopedia' → Shopping
+- 'Shopee' (bukan ShopeeFood) → Shopping
+- 'Lazada' → Shopping
+- 'Zalora' → Shopping
+- 'IKEA' → Shopping
+- 'Uniqlo', 'H&M', 'Zara' → Shopping
 
-KESEHATAN: apotek, rumah sakit, klinik, 
-dokter, gym, fitness
+INVESTASI:
+- 'Bibit' → Investasi
+- 'Ajaib' → Investasi
+- 'Stockbit' → Investasi
+- 'Deposito' → Investasi
+- 'Reksa Dana' → Investasi
 
-LAINNYA: semua yang tidak masuk kategori di atas
+KESEHATAN:
+- 'Apotek' atau 'Pharmacy' → Kesehatan
+- 'Rumah Sakit' atau 'Hospital' atau 'RS' → Kesehatan
+- 'Klinik' atau 'Dokter' → Kesehatan
+- 'Gym' atau 'Fitness' → Kesehatan
 
-Penting: Payroll dan transfer masuk dari 
-perusahaan SELALU masuk Gaji & Pemasukan, 
-bukan Transfer.
+RULES PENTING:
+- Tax on Interest → Lainnya
+- Transaksi KREDIT dari perusahaan → Gaji & Pemasukan
+- Transfer antar rekening sendiri yang bisa diidentifikasi → Transfer
+- Kalau tidak yakin → Lainnya
 
 Data transaksi:
-${JSON.stringify(transactions)}
+${JSON.stringify(transactionsWithJenis)}
 
 Return HANYA JSON array dengan tambahan field kategori:
-[{"tanggal":"...","deskripsi":"...","debit":0,
-"kredit":0,"saldo":0,"kategori":"..."}]
+[{"tanggal":"...","deskripsi":"...","debit":0,"kredit":0,"saldo":0,"jenis":"income|expense","kategori":"..."}]
 Jangan return apapun selain JSON.`
 
     const categoryResponse = await fetch("https://api.anthropic.com/v1/messages", {
@@ -196,8 +248,46 @@ Jangan return apapun selain JSON.`
       .replace(/```/g, "")
       .trim()
     const categorizedTransactions = JSON.parse(cleanCategorization)
+    const incomeNames = buildIncomeCategoryNames({}, [])
+    const processedTransactions = categorizedTransactions.map((t) =>
+      processTransaction(
+        {
+          ...t,
+          jenis: t.jenis || inferJenisFromAmounts(t.debit, t.kredit),
+        },
+        incomeNames,
+      ),
+    )
 
-    const summary = buildSummary(categorizedTransactions)
+    let categoryRules = []
+    try {
+      const rulesRaw = formData.get("categoryRules")
+      if (rulesRaw) {
+        const parsed = JSON.parse(String(rulesRaw))
+        if (Array.isArray(parsed)) categoryRules = parsed
+      }
+    } catch {
+      categoryRules = []
+    }
+
+    const { transactions: transactionsWithRules, appliedCount } =
+      applyCategoryRulesWithCount(processedTransactions, categoryRules)
+
+    let notesRules = []
+    try {
+      const notesRulesRaw = formData.get("notesRules")
+      if (notesRulesRaw) {
+        const parsed = JSON.parse(String(notesRulesRaw))
+        if (Array.isArray(parsed)) notesRules = parsed
+      }
+    } catch {
+      notesRules = []
+    }
+
+    const { transactions: transactionsWithNotes, appliedCount: notesAppliedCount } =
+      applyNotesRulesWithCount(transactionsWithRules, notesRules)
+
+    const summary = buildSummary(transactionsWithNotes)
     console.log("Summary for insights:", summary)
 
     const insightPrompt = `Kamu adalah financial advisor Indonesia yang 
@@ -250,7 +340,19 @@ Jangan return apapun selain JSON murni.`
       console.error("Insight generation failed:", insightErr.message)
     }
 
-    return Response.json({ transactions: categorizedTransactions, insights })
+    const transactionsWithAccount = transactionsWithNotes.map((t) => ({
+      ...t,
+      accountId: accountId || null,
+      matchedTransactionId: null,
+      matchType: null,
+    }))
+
+    return Response.json({
+      transactions: transactionsWithAccount,
+      insights,
+      autoAppliedCount: appliedCount,
+      autoAppliedNotesCount: notesAppliedCount,
+    })
 
   } catch (err) {
     console.error("Caught error:", err.message)
