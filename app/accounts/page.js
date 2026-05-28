@@ -52,7 +52,7 @@ const COLOR_OPTIONS = [
   "#8b5cf6",
   "#eab308",
   "#ef4444",
-  "#1B4332",
+  "#63B3ED",
 ];
 
 export default function AccountsPage() {
@@ -65,7 +65,7 @@ export default function AccountsPage() {
   const [formNama, setFormNama] = useState("");
   const [formTipe, setFormTipe] = useState("bank");
   const [formBank, setFormBank] = useState(BANK_OPTIONS[0]);
-  const [formWarna, setFormWarna] = useState("#1B4332");
+  const [formWarna, setFormWarna] = useState("#63B3ED");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [uploadHistory, setUploadHistory] = useState([]);
   const [deleteUploadConfirm, setDeleteUploadConfirm] = useState(null);
@@ -218,7 +218,7 @@ export default function AccountsPage() {
     setFormNama("");
     setFormTipe("bank");
     setFormBank(BANK_OPTIONS[0]);
-    setFormWarna("#1B4332");
+    setFormWarna("#63B3ED");
     setShowModal(true);
   };
 
@@ -311,19 +311,19 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="vale-page font-body relative min-h-screen">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#1B4332] md:text-4xl">
+          <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-4xl">
             Akun Saya
           </h1>
           <div className="flex flex-wrap items-center gap-3">
             {accounts.length > 0 ? (
               <Link
                 href="/upload"
-                className="rounded-full border border-[#1B4332] px-5 py-2.5 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332]/5"
+                className="rounded-full border border-[rgba(99,179,237,0.3)] px-5 py-2.5 text-sm font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.06)]"
               >
                 📄 Upload Statement
               </Link>
@@ -331,7 +331,7 @@ export default function AccountsPage() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="rounded-full bg-[#1B4332] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+              className="btn-primary rounded-full px-5 py-2.5 text-sm font-semibold transition btn-primary"
             >
               + Tambah Akun
             </button>
@@ -339,13 +339,13 @@ export default function AccountsPage() {
         </div>
 
         {accounts.length > 0 && transactions.length === 0 ? (
-          <div className="mt-6 rounded-2xl border border-dashed border-[#1B4332]/30 bg-[#1B4332]/5 px-6 py-8 text-center">
-            <p className="text-sm font-medium text-slate-700">
+          <div className="mt-6 rounded-2xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(99,179,237,0.06)] px-6 py-8 text-center">
+            <p className="text-sm font-medium text-[#8B92A5]">
               Belum ada transaksi. Upload statement pertama kamu!
             </p>
             <Link
               href="/upload"
-              className="mt-4 inline-flex items-center rounded-full bg-[#1B4332] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+              className="mt-4 inline-flex items-center btn-primary rounded-full px-5 py-2.5 text-sm font-semibold transition btn-primary"
             >
               📄 Upload Statement
             </Link>
@@ -353,14 +353,14 @@ export default function AccountsPage() {
         ) : null}
 
         {accounts.length === 0 ? (
-          <div className="mt-10 rounded-2xl border border-dashed border-[#1B4332]/30 bg-[#1B4332]/5 px-6 py-16 text-center">
-            <p className="text-lg font-medium text-slate-700">
+          <div className="mt-10 rounded-2xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(99,179,237,0.06)] px-6 py-16 text-center">
+            <p className="text-lg font-medium text-[#8B92A5]">
               Belum ada akun. Tambah akun pertama kamu!
             </p>
             <button
               type="button"
               onClick={openCreateModal}
-              className="mt-6 rounded-full border border-[#1B4332] px-5 py-2.5 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white"
+              className="btn-primary mt-6 rounded-full px-5 py-2.5 text-sm font-semibold text-white"
             >
               + Tambah Akun
             </button>
@@ -374,7 +374,7 @@ export default function AccountsPage() {
               return (
                 <div
                   key={account.id}
-                  className="flex flex-col rounded-2xl border border-[#1B4332]/20 bg-[#1B4332]/5 p-5"
+                  className="vale-card vale-card-hover flex flex-col rounded-2xl p-5"
                 >
                   <div className="flex items-start gap-4">
                     <span
@@ -383,14 +383,14 @@ export default function AccountsPage() {
                       aria-hidden="true"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-lg font-bold text-slate-900">
+                      <p className="truncate text-lg font-bold text-[#ECEEF2]">
                         {account.nama}
                       </p>
-                      <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+                      <span className="mt-2 inline-flex rounded-full bg-[#20242E] px-3 py-1 text-xs font-semibold text-[#8B92A5]">
                         {account.tipe === "cc" ? "💳 Credit Card" : "🏦 Bank Account"}
                       </span>
-                      <p className="mt-2 text-sm text-slate-600">{account.bank}</p>
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-2 text-sm text-[#8B92A5]">{account.bank}</p>
+                      <p className="mt-1 text-sm text-[#8B92A5]">
                         {txCount} transaksi
                       </p>
                     </div>
@@ -398,7 +398,7 @@ export default function AccountsPage() {
                       <button
                         type="button"
                         onClick={() => openEditModal(account)}
-                        className="rounded-full border border-slate-300 px-2.5 py-1.5 text-sm transition hover:bg-white"
+                        className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-[#20242E]"
                         aria-label={`Edit ${account.nama}`}
                       >
                         ✏️
@@ -406,7 +406,7 @@ export default function AccountsPage() {
                       <button
                         type="button"
                         onClick={() => handleDeleteClick(account)}
-                        className="rounded-full border border-slate-300 px-2.5 py-1.5 text-sm transition hover:bg-red-50"
+                        className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-red-500/10"
                         aria-label={`Hapus ${account.nama}`}
                       >
                         🗑️
@@ -414,12 +414,12 @@ export default function AccountsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 border-t border-[#1B4332]/10 pt-4">
-                    <p className="text-sm font-semibold text-[#1B4332]">
+                  <div className="mt-4 border-t border-white/[0.06] pt-4">
+                    <p className="text-sm font-semibold text-[#63B3ED]">
                       📁 Statement Terupload
                     </p>
                     {accountUploads.length === 0 ? (
-                      <p className="mt-2 text-sm text-slate-500">
+                      <p className="mt-2 text-sm text-[#8B92A5]">
                         Belum ada statement diupload
                       </p>
                     ) : (
@@ -427,13 +427,13 @@ export default function AccountsPage() {
                         {accountUploads.map((entry) => (
                           <li
                             key={entry.id}
-                            className="flex items-start gap-2 rounded-xl bg-white/80 px-3 py-2.5"
+                            className="flex items-start gap-2 rounded-xl bg-[#1A1D25]/[0.04] px-3 py-2.5"
                           >
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-slate-800">
+                              <p className="truncate text-sm font-medium text-[#ECEEF2]">
                                 {entry.fileName}
                               </p>
-                              <p className="mt-0.5 text-xs text-slate-500">
+                              <p className="mt-0.5 text-xs text-[#8B92A5]">
                                 {formatUploadDate(entry.uploadedAt)} ·{" "}
                                 {entry.transactionCount} transaksi ·{" "}
                                 {entry.dateRange}
@@ -442,7 +442,7 @@ export default function AccountsPage() {
                             <button
                               type="button"
                               onClick={() => handleDeleteUploadClick(entry)}
-                              className="shrink-0 rounded-full border border-slate-300 px-2 py-1 text-sm transition hover:bg-red-50"
+                              className="shrink-0 rounded-full border border-[rgba(255,255,255,0.08)] px-2 py-1 text-sm transition hover:bg-red-500/10"
                               aria-label={`Hapus ${entry.fileName}`}
                             >
                               🗑️
@@ -458,8 +458,8 @@ export default function AccountsPage() {
                       href={`/upload?accountId=${account.id}`}
                       className="mt-4 inline-flex w-full items-center justify-center rounded-full border-2 px-4 py-2.5 text-sm font-semibold transition hover:bg-black/[0.03]"
                       style={{
-                        borderColor: account.warna || "#1B4332",
-                        color: account.warna || "#1B4332",
+                        borderColor: account.warna || "#63B3ED",
+                        color: account.warna || "#63B3ED",
                       }}
                     >
                       📄 Upload Statement
@@ -473,10 +473,10 @@ export default function AccountsPage() {
 
         {unlinkedGroups.length > 0 ? (
           <section className="mt-10">
-            <h2 className="text-xl font-bold text-[#1B4332]">
+            <h2 className="text-xl font-bold text-[#63B3ED]">
               ⚠️ Statement Tidak Tertaut
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-[#8B92A5]">
               Ada {totalUnlinkedCount} transaksi yang belum ditautkan ke akun
             </p>
 
@@ -484,23 +484,23 @@ export default function AccountsPage() {
               {unlinkedGroups.map((group) => (
                 <div
                   key={group.periodKey}
-                  className="flex flex-col rounded-2xl border border-amber-200 bg-amber-50/60 p-5"
+                  className="flex flex-col rounded-2xl border border-[rgba(246,173,85,0.3)] bg-[rgba(246,173,85,0.05)] p-5"
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-lg"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-lg"
                       aria-hidden="true"
                     >
                       ⚠️
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-[#ECEEF2]">
                         Statement (tidak tertaut)
                       </p>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-[#8B92A5]">
                         {group.dateRange}
                       </p>
-                      <p className="mt-0.5 text-sm text-slate-500">
+                      <p className="mt-0.5 text-sm text-[#8B92A5]">
                         {group.transactionCount} transaksi
                       </p>
                     </div>
@@ -511,14 +511,14 @@ export default function AccountsPage() {
                       type="button"
                       onClick={() => openLinkModal(group)}
                       disabled={accounts.length === 0}
-                      className="flex-1 rounded-full border border-[#1B4332] px-3 py-2 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332]/5 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex-1 rounded-full border border-[rgba(99,179,237,0.3)] px-3 py-2 text-sm font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.06)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       🔗 Tautkan ke Akun
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeleteUnlinkedConfirm(group)}
-                      className="flex-1 rounded-full border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                      className="flex-1 rounded-full border border-red-300 px-3 py-2 text-sm font-semibold text-[#FC8181] transition hover:bg-red-500/10"
                     >
                       🗑️ Hapus
                     </button>
@@ -531,25 +531,25 @@ export default function AccountsPage() {
       </main>
 
       {showModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
             {createdAccountSuccess ? (
               <>
-                <p className="text-center text-lg font-semibold leading-relaxed text-slate-800">
+                <p className="text-center text-lg font-semibold leading-relaxed text-[#ECEEF2]">
                   ✅ Akun {createdAccountSuccess.nama} berhasil ditambahkan!
                 </p>
                 <div className="mt-6 flex flex-col gap-3">
                   <button
                     type="button"
                     onClick={handleUploadNow}
-                    className="w-full rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                    className="w-full btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
                   >
                     📄 Upload Statement Sekarang
                   </button>
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Nanti Saja
                   </button>
@@ -557,30 +557,30 @@ export default function AccountsPage() {
               </>
             ) : (
               <>
-                <h3 className="text-xl font-bold text-[#1B4332]">
+                <h3 className="text-xl font-bold text-[#63B3ED]">
                   {editingAccount ? "Edit Akun" : "Tambah Akun"}
                 </h3>
 
-                <label className="mt-5 block text-sm font-semibold text-slate-700">
+                <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
                   Nama Akun
                   <input
                     type="text"
                     value={formNama}
                     onChange={(event) => setFormNama(event.target.value)}
                     placeholder="Contoh: Jago Utama"
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                    className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
                   />
                 </label>
 
-                <p className="mt-5 text-sm font-semibold text-slate-700">Tipe Akun</p>
+                <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Tipe Akun</p>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleTipeChange("bank")}
                     className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                       formTipe === "bank"
-                        ? "bg-[#1B4332] text-white"
-                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        ? "vale-toggle-active"
+                        : "vale-toggle-inactive"
                     }`}
                   >
                     🏦 Bank Account
@@ -590,20 +590,20 @@ export default function AccountsPage() {
                     onClick={() => handleTipeChange("cc")}
                     className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                       formTipe === "cc"
-                        ? "bg-[#1B4332] text-white"
-                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        ? "vale-toggle-active"
+                        : "vale-toggle-inactive"
                     }`}
                   >
                     💳 Credit Card
                   </button>
                 </div>
 
-                <label className="mt-5 block text-sm font-semibold text-slate-700">
+                <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
                   Bank
                   <select
                     value={formBank}
                     onChange={(event) => setFormBank(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                    className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm"
                   >
                     {bankOptions.map((option) => (
                       <option key={option} value={option}>
@@ -613,7 +613,7 @@ export default function AccountsPage() {
                   </select>
                 </label>
 
-                <p className="mt-5 text-sm font-semibold text-slate-700">Warna Akun</p>
+                <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Warna Akun</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {COLOR_OPTIONS.map((color) => (
                     <button
@@ -622,7 +622,7 @@ export default function AccountsPage() {
                       onClick={() => setFormWarna(color)}
                       className={`h-9 w-9 rounded-full transition ${
                         formWarna === color
-                          ? "ring-2 ring-[#1B4332] ring-offset-2"
+                          ? "vale-color-selected"
                           : "hover:scale-105"
                       }`}
                       style={{ backgroundColor: color }}
@@ -635,14 +635,14 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={handleSave}
-                    className="flex-1 rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                    className="flex-1 btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
                   >
                     Simpan
                   </button>
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -654,10 +654,10 @@ export default function AccountsPage() {
       ) : null}
 
       {linkModalGroup ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-[#1B4332]">Tautkan ke Akun</h3>
-            <p className="mt-2 text-sm text-slate-600">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-[#63B3ED]">Tautkan ke Akun</h3>
+            <p className="mt-2 text-sm text-[#8B92A5]">
               Tautkan {linkModalGroup.transactionCount} transaksi ke akun mana?
             </p>
 
@@ -673,20 +673,20 @@ export default function AccountsPage() {
                         onClick={() => setLinkAccountId(account.id)}
                         className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition ${
                           isSelected
-                            ? "border-[#1B4332] bg-[#1B4332]/5"
-                            : "border-slate-200 hover:border-slate-300"
+                            ? "border-[#63B3ED] bg-[rgba(99,179,237,0.06)]"
+                            : "border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.08)]"
                         }`}
                       >
                         <span
                           className="h-4 w-4 shrink-0 rounded-full"
-                          style={{ backgroundColor: account.warna || "#1B4332" }}
+                          style={{ backgroundColor: account.warna || "#63B3ED" }}
                           aria-hidden="true"
                         />
                         <span className="min-w-0">
-                          <span className="block truncate font-semibold text-slate-900">
+                          <span className="block truncate font-semibold text-[#ECEEF2]">
                             {account.nama}
                           </span>
-                          <span className="block truncate text-sm text-slate-500">
+                          <span className="block truncate text-sm text-[#8B92A5]">
                             {account.bank}
                           </span>
                         </span>
@@ -699,7 +699,7 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={handleConfirmLinkUnlinked}
-                    className="flex-1 rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                    className="flex-1 btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
                   >
                     Tautkan
                   </button>
@@ -709,7 +709,7 @@ export default function AccountsPage() {
                       setLinkModalGroup(null);
                       setLinkAccountId("");
                     }}
-                    className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -717,13 +717,13 @@ export default function AccountsPage() {
               </>
             ) : (
               <>
-                <p className="mt-4 text-sm text-slate-600">
+                <p className="mt-4 text-sm text-[#8B92A5]">
                   Belum ada akun. Tambah akun dulu sebelum menautkan transaksi.
                 </p>
                 <button
                   type="button"
                   onClick={() => setLinkModalGroup(null)}
-                  className="mt-6 w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Tutup
                 </button>
@@ -734,10 +734,10 @@ export default function AccountsPage() {
       ) : null}
 
       {deleteUnlinkedConfirm ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#1B4332]">Hapus Transaksi?</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#63B3ED]">Hapus Transaksi?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
               Hapus {deleteUnlinkedConfirm.transactionCount} transaksi yang tidak
               tertaut ini? Data akan hilang permanen.
             </p>
@@ -752,7 +752,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteUnlinkedConfirm(null)}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -762,10 +762,10 @@ export default function AccountsPage() {
       ) : null}
 
       {deleteUploadConfirm ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#1B4332]">Hapus Statement?</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#63B3ED]">Hapus Statement?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
               Hapus statement ini? {deleteUploadConfirm.count} transaksi dari periode
               ini akan dihapus dari dashboard.
             </p>
@@ -780,7 +780,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteUploadConfirm(null)}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -790,10 +790,10 @@ export default function AccountsPage() {
       ) : null}
 
       {deleteConfirm ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#1B4332]">Hapus Akun?</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#63B3ED]">Hapus Akun?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
               Akun ini punya {deleteConfirm.count} transaksi. Menghapus akun akan
               menghapus semua transaksinya. Lanjutkan?
             </p>
@@ -808,7 +808,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -818,7 +818,7 @@ export default function AccountsPage() {
       ) : null}
 
       {toastMessage ? (
-        <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1B4332] px-5 py-3 text-sm font-semibold text-white shadow-lg">
+        <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 vale-toast rounded-lg px-5 py-3 text-sm font-semibold">
           {toastMessage}
         </div>
       ) : null}

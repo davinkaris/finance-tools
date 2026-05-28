@@ -43,7 +43,7 @@ const COLOR_OPTIONS = [
   "#8b5cf6",
   "#eab308",
   "#ef4444",
-  "#1B4332",
+  "#63B3ED",
 ];
 
 const UPLOAD_STAGES = [
@@ -66,7 +66,7 @@ function StepIndicator({ currentStep }) {
         return (
           <div key={step} className="flex items-center gap-2">
             {index > 0 ? (
-              <span className="text-slate-300" aria-hidden="true">
+              <span className="text-white/20" aria-hidden="true">
                 →
               </span>
             ) : null}
@@ -75,8 +75,8 @@ function StepIndicator({ currentStep }) {
                 isCompleted
                   ? "bg-[#10b981] text-white"
                   : isActive
-                    ? "bg-[#1B4332] text-white"
-                    : "bg-slate-200 text-slate-500"
+                    ? "btn-primary"
+                    : "bg-[#20242E] text-[#8B92A5]"
               }`}
             >
               {step}
@@ -93,7 +93,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
   const [formNama, setFormNama] = useState("");
   const [formTipe, setFormTipe] = useState("bank");
   const [formBank, setFormBank] = useState(BANK_OPTIONS[0]);
-  const [formWarna, setFormWarna] = useState("#1B4332");
+  const [formWarna, setFormWarna] = useState("#63B3ED");
   const [createdAccount, setCreatedAccount] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -114,7 +114,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
     setFormNama("");
     setFormTipe("bank");
     setFormBank(BANK_OPTIONS[0]);
-    setFormWarna("#1B4332");
+    setFormWarna("#63B3ED");
     setCreatedAccount(null);
     setSelectedFile(null);
     setIsUploading(false);
@@ -283,20 +283,20 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto vale-modal w-full rounded-2xl p-6 shadow-xl">
         {canClose ? (
           <button
             type="button"
             onClick={handleClose}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-[#8B92A5] transition hover:bg-[#20242E] hover:text-[#8B92A5]"
             aria-label="Tutup modal"
           >
             ×
           </button>
         ) : null}
 
-        <h3 className="pr-8 text-xl font-bold text-[#1B4332]">
+        <h3 className="pr-8 text-xl font-bold text-[#ECEEF2]">
           Tambah Akun &amp; Upload Statement
         </h3>
 
@@ -304,28 +304,28 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
 
         {step === 1 ? (
           <>
-            <h4 className="text-lg font-semibold text-slate-900">Buat Akun Baru</h4>
+            <h4 className="text-lg font-semibold text-[#ECEEF2]">Buat Akun Baru</h4>
 
-            <label className="mt-5 block text-sm font-semibold text-slate-700">
+            <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
               Nama Akun
               <input
                 type="text"
                 value={formNama}
                 onChange={(event) => setFormNama(event.target.value)}
                 placeholder="Contoh: Jago Utama"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
               />
             </label>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Tipe Akun</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Tipe Akun</p>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 onClick={() => handleTipeChange("bank")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   formTipe === "bank"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "vale-toggle-active"
+                    : "vale-toggle-inactive"
                 }`}
               >
                 🏦 Bank Account
@@ -335,20 +335,20 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
                 onClick={() => handleTipeChange("cc")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   formTipe === "cc"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "vale-toggle-active"
+                    : "vale-toggle-inactive"
                 }`}
               >
                 💳 Credit Card
               </button>
             </div>
 
-            <label className="mt-5 block text-sm font-semibold text-slate-700">
+            <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
               Bank
               <select
                 value={formBank}
                 onChange={(event) => setFormBank(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm"
               >
                 {bankOptions.map((option) => (
                   <option key={option} value={option}>
@@ -358,7 +358,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
               </select>
             </label>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Warna Akun</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Warna Akun</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {COLOR_OPTIONS.map((color) => (
                 <button
@@ -367,7 +367,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
                   onClick={() => setFormWarna(color)}
                   className={`h-9 w-9 rounded-full transition ${
                     formWarna === color
-                      ? "ring-2 ring-[#1B4332] ring-offset-2"
+                      ? "vale-color-selected"
                       : "hover:scale-105"
                   }`}
                   style={{ backgroundColor: color }}
@@ -379,7 +379,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
             <button
               type="button"
               onClick={handleStep1Continue}
-              className="mt-6 w-full rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+              className="mt-6 w-full btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
             >
               Lanjut →
             </button>
@@ -388,14 +388,14 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
 
         {step === 2 ? (
           <>
-            <h4 className="text-lg font-semibold text-slate-900">
+            <h4 className="text-lg font-semibold text-[#ECEEF2]">
               Upload Statement (Opsional)
             </h4>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-[#8B92A5]">
               Akun {createdAccount?.nama} berhasil dibuat ✅
             </p>
 
-            <div className="mt-5 rounded-2xl border-2 border-dashed border-[#1B4332]/35 bg-[#1B4332]/5 px-4 py-8">
+            <div className="vale-upload-box mt-5 px-4 py-8">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -415,11 +415,11 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
                 }}
                 className="flex flex-col items-center text-center"
               >
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-[#8B92A5]">
                   Drag &amp; drop PDF di sini
                 </p>
                 {selectedFile ? (
-                  <p className="mt-2 max-w-full truncate text-xs text-slate-500">
+                  <p className="mt-2 max-w-full truncate text-xs text-[#8B92A5]">
                     {selectedFile.name}
                   </p>
                 ) : null}
@@ -427,7 +427,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="mt-4 rounded-full border border-[#1B4332] px-5 py-2 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 rounded-full border border-[rgba(99,179,237,0.3)] px-5 py-2 text-sm font-semibold text-[#63B3ED] transition btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Pilih File PDF
                 </button>
@@ -440,8 +440,8 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
               disabled={!canUpload}
               className={`mt-4 w-full rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                 canUpload
-                  ? "bg-[#1B4332] text-white hover:bg-[#163728]"
-                  : "cursor-not-allowed bg-slate-300 text-slate-500"
+                  ? "btn-primary hover:bg-[#63B3ED]"
+                  : "cursor-not-allowed bg-[#20242E] text-[#8B92A5]"
               }`}
             >
               {isUploading ? "Sedang menganalisa..." : "Upload & Analisa"}
@@ -451,23 +451,23 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
               type="button"
               onClick={handleSkipUpload}
               disabled={isUploading}
-              className="mt-3 w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Lewati, Upload Nanti
             </button>
 
             {isUploading ? (
               <div className="mt-4">
-                <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                <div className="vale-progress-track h-2.5 overflow-hidden rounded-full">
                   <div
-                    className="h-full rounded-full bg-[#1B4332] transition-all duration-700 ease-out"
+                    className="vale-progress-bar h-full rounded-full transition-all duration-700 ease-out"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <p className="mt-2 text-sm font-medium text-[#1B4332]">
+                <p className="mt-2 text-sm font-medium text-[#63B3ED]">
                   {stageLabel}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">{progressPercent}%</p>
+                <p className="mt-1 text-xs text-[#8B92A5]">{progressPercent}%</p>
               </div>
             ) : null}
           </>
@@ -475,8 +475,8 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
 
         {step === 3 ? (
           <>
-            <h4 className="text-lg font-semibold text-slate-900">Selesai!</h4>
-            <p className="mt-4 text-center text-base leading-relaxed text-slate-700">
+            <h4 className="text-lg font-semibold text-[#ECEEF2]">Selesai!</h4>
+            <p className="mt-4 text-center text-base leading-relaxed text-[#8B92A5]">
               {skippedUpload ? (
                 <>✅ Akun {createdAccount?.nama} berhasil ditambahkan</>
               ) : duplicateCount > 0 ? (
@@ -491,7 +491,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
             <button
               type="button"
               onClick={handleFinish}
-              className="mt-6 w-full rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+              className="mt-6 w-full btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
             >
               Lihat Dashboard
             </button>

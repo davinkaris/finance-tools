@@ -27,10 +27,10 @@ export default function UploadPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-white text-slate-900">
+        <div className="vale-page font-body">
           <Navbar />
-          <main className="mx-auto flex w-full max-w-4xl items-center justify-center px-6 py-20">
-            <p className="text-sm text-slate-500">Memuat...</p>
+          <main className="relative z-10 mx-auto flex w-full max-w-4xl items-center justify-center px-6 py-20">
+            <p className="text-sm text-[#8B92A5]">Memuat...</p>
           </main>
         </div>
       }
@@ -231,65 +231,59 @@ function UploadPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="vale-page font-body relative min-h-screen">
       <Navbar />
 
-      <main className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-16 md:px-10 md:py-20">
+      <main className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-16 md:px-10 md:py-20">
         <section className="w-full text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#1B4332] md:text-5xl">
+          <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-5xl">
             Upload Bank Statement Kamu
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-[#8B92A5] md:text-lg">
             Mendukung semua bank Indonesia: BCA, Mandiri, BRI, BNI, CIMB, dan
             lainnya. Format PDF, maksimal 3 bulan terakhir
           </p>
 
           <div className="mx-auto mt-10 w-full max-w-2xl text-left">
-            <h2 className="text-lg font-bold text-[#1B4332]">Pilih Akun</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <h2 className="text-lg font-bold text-[#ECEEF2]">Pilih Akun</h2>
+            <p className="mt-1 text-sm text-[#8B92A5]">
               {isPreselected
                 ? "Statement akan diupload ke akun ini"
                 : "Statement ini dari akun mana?"}
             </p>
 
             {accounts.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center">
-                <p className="text-sm text-slate-600">
+              <div className="vale-card mt-4 rounded-2xl border border-dashed border-[rgba(255,255,255,0.12)] px-6 py-8 text-center">
+                <p className="text-sm text-[#8B92A5]">
                   Belum ada akun. Tambah akun dulu sebelum upload.
                 </p>
                 <Link
                   href="/accounts"
-                  className="mt-4 inline-flex items-center rounded-full bg-[#1B4332] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                  className="btn-primary mt-4 inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold text-white"
                 >
                   Tambah Akun
                 </Link>
               </div>
             ) : isPreselected && selectedAccount ? (
-              <div
-                className="mt-4 flex items-center gap-3 rounded-xl border-2 px-4 py-3"
-                style={{
-                  borderColor: selectedAccount.warna || "#1B4332",
-                  backgroundColor: `${selectedAccount.warna || "#1B4332"}0d`,
-                }}
-              >
+              <div className="vale-account-selected mt-4 flex items-center gap-3 rounded-xl border-2 px-4 py-3">
                 <span
                   className="h-4 w-4 shrink-0 rounded-full"
                   style={{
-                    backgroundColor: selectedAccount.warna || "#1B4332",
+                    backgroundColor: selectedAccount.warna || "#63B3ED",
                   }}
                   aria-hidden="true"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-slate-900">
+                  <span className="block truncate font-semibold text-[#ECEEF2]">
                     {selectedAccount.nama}
                   </span>
-                  <span className="block truncate text-sm text-slate-500">
+                  <span className="block truncate text-sm text-[#8B92A5]">
                     {selectedAccount.bank}
                   </span>
                 </span>
                 <Link
                   href="/upload"
-                  className="shrink-0 text-sm font-semibold text-[#1B4332] underline-offset-2 hover:underline"
+                  className="shrink-0 text-sm font-semibold text-[#63B3ED] underline-offset-2 hover:underline"
                 >
                   Ganti akun
                 </Link>
@@ -304,22 +298,22 @@ function UploadPageContent() {
                       type="button"
                       disabled={isLoading}
                       onClick={() => setSelectedAccountId(account.id)}
-                      className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`vale-card flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
                         isSelected
-                          ? "border-[#1B4332] bg-[#1B4332]/5"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                          ? "vale-account-selected border-[#63B3ED]"
+                          : "border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.12)]"
                       }`}
                     >
                       <span
                         className="h-4 w-4 shrink-0 rounded-full"
-                        style={{ backgroundColor: account.warna || "#1B4332" }}
+                        style={{ backgroundColor: account.warna || "#63B3ED" }}
                         aria-hidden="true"
                       />
                       <span className="min-w-0">
-                        <span className="block truncate font-semibold text-slate-900">
+                        <span className="block truncate font-semibold text-[#ECEEF2]">
                           {account.nama}
                         </span>
-                        <span className="block truncate text-sm text-slate-500">
+                        <span className="block truncate text-sm text-[#8B92A5]">
                           {account.bank}
                         </span>
                       </span>
@@ -330,7 +324,7 @@ function UploadPageContent() {
             )}
           </div>
 
-          <div className="mx-auto mt-10 flex w-full max-w-2xl flex-col items-center rounded-2xl border-2 border-dashed border-[#1B4332]/35 bg-[#1B4332]/5 px-6 py-14">
+          <div className="vale-upload-box mx-auto mt-10 flex w-full max-w-2xl flex-col items-center px-6 py-14">
             <input
               ref={fileInputRef}
               type="file"
@@ -349,7 +343,7 @@ function UploadPageContent() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.8"
-                className="h-12 w-12 text-[#1B4332]"
+                className="h-12 w-12 text-[#63B3ED]"
                 aria-hidden="true"
               >
                 <path
@@ -359,20 +353,18 @@ function UploadPageContent() {
                 />
               </svg>
 
-              <p className="mt-4 text-lg font-medium text-slate-700">
+              <p className="mt-4 text-lg font-medium text-[#ECEEF2]">
                 Drag &amp; drop PDF kamu di sini
               </p>
 
               {selectedFile ? (
-                <div className="mt-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#1B4332]/30 bg-white px-4 py-2 text-sm font-medium text-slate-700">
-                  <span className="truncate">
-                    📄 {selectedFile.name}
-                  </span>
+                <div className="vale-card mt-4 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#8B92A5]">
+                  <span className="truncate">📄 {selectedFile.name}</span>
                   <button
                     type="button"
                     onClick={handleRemoveFile}
                     disabled={isLoading}
-                    className="shrink-0 rounded-full px-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="shrink-0 rounded-full px-1.5 text-[#8B92A5] transition hover:bg-[#20242E] hover:text-[#ECEEF2] disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Hapus file"
                   >
                     ✕
@@ -384,7 +376,7 @@ function UploadPageContent() {
                 type="button"
                 onClick={handlePickFile}
                 disabled={isLoading}
-                className="mt-6 inline-flex items-center rounded-full border border-[#1B4332] px-6 py-3 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-6 inline-flex items-center rounded-full border border-[rgba(99,179,237,0.3)] px-6 py-3 text-sm font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.08)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Pilih File
               </button>
@@ -397,8 +389,8 @@ function UploadPageContent() {
             disabled={!canAnalyze}
             className={`mt-8 inline-flex items-center rounded-full px-7 py-3.5 text-base font-semibold transition ${
               canAnalyze
-                ? "bg-[#1B4332] text-white hover:bg-[#163728]"
-                : "cursor-not-allowed bg-slate-300 text-slate-500"
+                ? "btn-primary"
+                : "cursor-not-allowed bg-[#20242E] text-[#8B92A5]"
             }`}
           >
             {isLoading ? "Sedang menganalisa..." : "Analisa Sekarang"}
@@ -406,16 +398,16 @@ function UploadPageContent() {
 
           {isLoading ? (
             <div className="mx-auto mt-6 w-full max-w-md">
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div className="vale-progress-track h-2.5 overflow-hidden rounded-full">
                 <div
-                  className="h-full rounded-full bg-[#1B4332] transition-all duration-700 ease-out"
+                  className="vale-progress-bar h-full rounded-full transition-all duration-700 ease-out"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <p className="mt-3 text-sm font-medium text-[#1B4332] transition-opacity duration-300">
+              <p className="mt-3 text-sm font-medium text-[#63B3ED] transition-opacity duration-300">
                 {stageLabel}
               </p>
-              <p className="mt-1 text-xs text-slate-500">{progressPercent}%</p>
+              <p className="mt-1 text-xs text-[#8B92A5]">{progressPercent}%</p>
             </div>
           ) : null}
         </section>

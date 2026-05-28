@@ -62,7 +62,7 @@ const formatAmount = (transaksi) => {
   const amount = kredit > 0 ? kredit : debit;
 
   if (amount === 0) {
-    return { text: "-", className: "whitespace-nowrap text-slate-700" };
+    return { text: "-", className: "whitespace-nowrap text-[#8B92A5]" };
   }
 
   const formatted = new Intl.NumberFormat("id-ID").format(amount);
@@ -71,7 +71,7 @@ const formatAmount = (transaksi) => {
   return {
     text: `${prefix}Rp ${formatted}`,
     className: `whitespace-nowrap font-semibold ${
-      kredit > 0 ? "text-green-600" : "text-red-500"
+      kredit > 0 ? "text-[#68D391]" : "text-[#FC8181]"
     }`,
   };
 };
@@ -242,6 +242,12 @@ const formatYAxisRupiah = (value) => {
   return String(num);
 };
 
+const INSIGHT_VARIANTS = [
+  "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#63B3ED] bg-[rgba(99,179,237,0.05)]",
+  "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#68D391] bg-[rgba(104,211,145,0.05)]",
+  "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#F6AD55] bg-[rgba(246,173,85,0.05)]",
+];
+
 const StackedBarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
 
@@ -251,14 +257,14 @@ const StackedBarTooltip = ({ active, payload, label }) => {
   const total = validPayload.reduce((sum, item) => sum + Number(item.value), 0);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-lg">
-      <p className="mb-2 font-semibold text-slate-800">{label}</p>
+    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#20242E] px-3 py-2.5 text-sm shadow-lg text-[#ECEEF2]">
+      <p className="mb-2 font-semibold text-[#ECEEF2]">{label}</p>
       <div className="space-y-1">
         {validPayload.map((item) => {
           const amount = Number(item.value);
           const percent = total > 0 ? ((amount / total) * 100).toFixed(1) : "0.0";
           return (
-            <p key={item.dataKey} className="text-slate-700">
+            <p key={item.dataKey} className="text-[#8B92A5]">
               <span
                 className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm"
                 style={{ backgroundColor: item.color }}
@@ -283,21 +289,21 @@ const MonthlyStackedBarChart = ({
 
   return (
     <div className="min-w-0 flex-1">
-      <h3 className="text-base font-bold text-[#1B4332]">{title}</h3>
+      <h3 className="text-base font-bold text-[#ECEEF2]">{title}</h3>
       {hasData ? (
         <div className="mt-3 h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 12, fill: "#64748b" }}
-                axisLine={{ stroke: "#cbd5e1" }}
+                tick={{ fontSize: 12, fill: "#8B92A5" }}
+                axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={formatYAxisRupiah}
-                tick={{ fontSize: 12, fill: "#64748b" }}
+                tick={{ fontSize: 12, fill: "#8B92A5" }}
                 axisLine={false}
                 tickLine={false}
                 width={56}
@@ -321,7 +327,7 @@ const MonthlyStackedBarChart = ({
                       }
                       stroke={
                         selectedBulan && entry.monthKey === selectedBulan
-                          ? "#1B4332"
+                          ? "#63B3ED"
                           : "none"
                       }
                       strokeWidth={selectedBulan && entry.monthKey === selectedBulan ? 1.5 : 0}
@@ -333,7 +339,7 @@ const MonthlyStackedBarChart = ({
           </ResponsiveContainer>
         </div>
       ) : (
-        <p className="mt-3 text-sm text-slate-500">Belum ada data untuk ditampilkan.</p>
+        <p className="mt-3 text-sm text-[#8B92A5]">Belum ada data untuk ditampilkan.</p>
       )}
     </div>
   );
@@ -401,7 +407,7 @@ function TransactionNoteCell({
           }
         }}
         placeholder="Tambah catatan..."
-        className="w-full min-w-[160px] rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm italic text-slate-700 outline-none focus:border-[#1B4332] focus:ring-1 focus:ring-[#1B4332]"
+        className="w-full min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm italic text-[#8B92A5] outline-none focus:border-[#63B3ED] focus:ring-1 focus:ring-[#63B3ED]"
       />
     );
   }
@@ -411,7 +417,7 @@ function TransactionNoteCell({
       {note ? (
         <span
           title={note}
-          className="max-w-[180px] truncate text-sm italic text-slate-600"
+          className="max-w-[180px] truncate text-sm italic text-[#8B92A5]"
         >
           {truncateNote(note)}
         </span>
@@ -1556,7 +1562,7 @@ export default function DashboardPage() {
   const renderCategoryCards = (items, emptyMessage) => {
     if (items.length === 0) {
       return (
-        <div className="rounded-2xl border border-slate-200 p-4 text-slate-500">
+        <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] p-4 text-[#8B92A5]">
           {emptyMessage}
         </div>
       );
@@ -1573,8 +1579,8 @@ export default function DashboardPage() {
           onClick={() => setActiveCategory(item.kategori)}
           className={`group relative rounded-2xl border p-4 text-left transition ${
             activeCategory === item.kategori
-              ? "border-[#1B4332] bg-[#1B4332] text-white"
-              : "border-[#1B4332]/20 bg-[#1B4332]/5 text-slate-900"
+              ? "vale-pill-active"
+              : "vale-card text-[#ECEEF2] hover:border-[rgba(99,179,237,0.25)] hover:bg-[#1E2129]"
           }`}
         >
           <span
@@ -1592,8 +1598,8 @@ export default function DashboardPage() {
             }}
             className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-xs opacity-0 transition-opacity group-hover:opacity-100 ${
               activeCategory === item.kategori
-                ? "bg-white/20 hover:bg-white/30"
-                : "bg-slate-200 hover:bg-slate-300"
+                ? "bg-[#1A1D25]/20 hover:bg-[#1A1D25]/30"
+                : "bg-[#20242E] hover:bg-[#1A1D25]/20"
             }`}
             aria-label={`Edit kategori ${item.kategori}`}
           >
@@ -1615,8 +1621,8 @@ export default function DashboardPage() {
               }}
               className={`absolute right-11 top-3 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold opacity-0 transition-opacity group-hover:opacity-100 ${
                 activeCategory === item.kategori
-                  ? "bg-white/20 text-white hover:bg-white/30"
-                  : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                  ? "bg-[#1A1D25]/20 text-white hover:bg-[#1A1D25]/30"
+                  : "bg-[#20242E] text-[#8B92A5] hover:bg-[#1A1D25]/20"
               }`}
               aria-label={`Hapus kategori ${item.kategori}`}
             >
@@ -1625,21 +1631,21 @@ export default function DashboardPage() {
           ) : null}
           <p
             className={`text-sm font-medium ${
-              activeCategory === item.kategori ? "text-white/90" : "text-slate-600"
+              activeCategory === item.kategori ? "text-white/90" : "text-[#8B92A5]"
             }`}
           >
             {emojiMap[item.kategori] || "📦"} {item.kategori}
           </p>
           <p
             className={`mt-1 text-xl font-bold ${
-              activeCategory === item.kategori ? "text-white" : "text-[#1B4332]"
+              activeCategory === item.kategori ? "text-white" : "text-[#63B3ED]"
             }`}
           >
             {formatRupiah(item.totalDebit)}
           </p>
           <p
             className={`mt-1 text-sm ${
-              activeCategory === item.kategori ? "text-white/90" : "text-slate-600"
+              activeCategory === item.kategori ? "text-white/90" : "text-[#8B92A5]"
             }`}
           >
             {item.count} transaksi
@@ -1650,14 +1656,14 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="vale-page font-body relative min-h-screen">
       <Navbar />
 
-      <main className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
-        <h1 className="text-3xl font-extrabold tracking-tight text-[#1B4332] md:text-4xl">
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
+          <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-4xl">
           Dashboard Transaksi
           {selectedAccount ? (
-            <span className="font-extrabold text-[#1B4332]">
+            <span className="font-serif-display font-normal text-[#ECEEF2]">
               {" "}
               — {selectedAccount.nama}
             </span>
@@ -1670,8 +1676,8 @@ export default function DashboardPage() {
             onClick={() => setSelectedAccountId("")}
             className={`inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold transition ${
               !selectedAccountId
-                ? "border-transparent bg-[#1B4332] text-white"
-                : "border-slate-300 text-slate-500 hover:border-slate-400"
+                ? "btn-primary"
+                : "vale-pill-inactive"
             }`}
           >
             Semua Akun
@@ -1685,19 +1691,12 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setSelectedAccountId(account.id)}
                 className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
-                  isActive
-                    ? "border-transparent text-white"
-                    : "border-slate-300 text-slate-500 hover:border-slate-400"
+                  isActive ? "vale-pill-active" : "vale-pill-inactive"
                 }`}
-                style={
-                  isActive
-                    ? { backgroundColor: account.warna || "#1B4332" }
-                    : undefined
-                }
               >
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: account.warna || "#1B4332" }}
+                  style={{ backgroundColor: account.warna || "#63B3ED" }}
                   aria-hidden="true"
                 />
                 {account.nama}
@@ -1708,7 +1707,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => setShowAddAccountModal(true)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-300 text-lg font-semibold text-slate-600 transition hover:border-[#1B4332] hover:text-[#1B4332]"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-lg font-semibold text-[#8B92A5] transition hover:border-[#63B3ED] hover:text-[#63B3ED]"
             aria-label="Tambah akun dan upload statement"
           >
             +
@@ -1716,11 +1715,11 @@ export default function DashboardPage() {
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-semibold text-[#1B4332]">Filter Bulan:</p>
+          <p className="text-sm font-semibold text-[#63B3ED]">Filter Bulan:</p>
           <select
             value={selectedBulan}
             onChange={(event) => setSelectedBulan(event.target.value)}
-            className="rounded-full border border-[#1B4332] bg-white px-4 py-2 text-sm font-semibold text-[#1B4332] outline-none transition hover:bg-[#1B4332] hover:text-white focus:bg-white focus:text-[#1B4332]"
+            className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2 text-sm font-semibold text-[#ECEEF2] outline-none transition focus:border-[#63B3ED]"
           >
             <option value="">Semua Bulan</option>
             {availableBulan.map((bulan) => (
@@ -1732,18 +1731,18 @@ export default function DashboardPage() {
         </div>
 
         {insights.length > 0 && !selectedAccountId ? (
-          <section className="mt-8 rounded-2xl border border-[#1B4332]/20 bg-[#1B4332]/5 p-5">
-            <h2 className="text-xl font-bold text-[#1B4332]">✨ AI Insight</h2>
-            <p className="mt-1 text-sm text-slate-600">
+          <section className="vale-card mt-8 rounded-2xl p-5">
+            <h2 className="text-xl font-bold text-[#63B3ED]">✨ AI Insight</h2>
+            <p className="mt-1 text-sm text-[#8B92A5]">
               Analisa personal berdasarkan pola spending kamu
             </p>
             <ul className="mt-4 space-y-3">
               {insights.map((insight, index) => (
                 <li
                   key={`insight-${index}`}
-                  className="rounded-xl border border-[#1B4332]/15 bg-white px-4 py-3 text-sm leading-relaxed text-slate-700"
+                  className={`${INSIGHT_VARIANTS[index % INSIGHT_VARIANTS.length]} px-4 py-3 text-sm leading-relaxed text-[#8B92A5]`}
                 >
-                  <span className="mr-2 font-bold text-[#1B4332]">{index + 1}.</span>
+                  <span className="mr-2 font-bold text-[#63B3ED]">{index + 1}.</span>
                   {insight}
                 </li>
               ))}
@@ -1751,8 +1750,8 @@ export default function DashboardPage() {
           </section>
         ) : null}
 
-        <section className="mt-8 rounded-2xl border border-[#1B4332]/20 bg-[#1B4332]/5 p-5">
-          <h2 className="text-xl font-bold text-[#1B4332]">
+        <section className="vale-card mt-8 rounded-2xl p-5">
+          <h2 className="text-xl font-bold text-[#63B3ED]">
             Ringkasan Keuangan per Bulan
           </h2>
           <div className="mt-4 flex flex-col gap-8 lg:flex-row">
@@ -1778,7 +1777,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => setShowCategoryModal(true)}
-              className="rounded-full border border-[#1B4332] px-4 py-2 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332] hover:text-white"
+              className="rounded-full border border-[rgba(99,179,237,0.3)] px-4 py-2 text-sm font-semibold text-[#63B3ED] transition btn-primary"
             >
               + Tambah Kategori
             </button>
@@ -1787,8 +1786,8 @@ export default function DashboardPage() {
               onClick={() => setActiveCategory("all")}
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 activeCategory === "all"
-                  ? "bg-[#1B4332] text-white"
-                  : "border border-[#1B4332] text-[#1B4332] hover:bg-[#1B4332] hover:text-white"
+                  ? "btn-primary"
+                  : "border border-[rgba(99,179,237,0.3)] text-[#63B3ED] btn-primary"
               }`}
             >
               Semua Transaksi
@@ -1797,8 +1796,8 @@ export default function DashboardPage() {
 
           <div className="mt-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-extrabold text-[#1B4332]">💰 Pemasukan</h2>
-              <p className="text-xl font-bold text-[#1B4332]">
+              <h2 className="text-2xl font-extrabold text-[#68D391]">💰 Pemasukan</h2>
+              <p className="text-xl font-bold text-[#68D391]">
                 {formatRupiah(totalPemasukan)}
               </p>
             </div>
@@ -1810,10 +1809,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-slate-200 pt-10">
+          <div className="mt-10 border-t border-[rgba(255,255,255,0.08)] pt-10">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-extrabold text-[#1B4332]">💸 Pengeluaran</h2>
-              <p className="text-xl font-bold text-[#1B4332]">
+              <h2 className="text-2xl font-extrabold text-[#FC8181]">💸 Pengeluaran</h2>
+              <p className="text-xl font-bold text-[#FC8181]">
                 {formatRupiah(totalPengeluaran)}
               </p>
             </div>
@@ -1826,21 +1825,21 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200">
+        <section className="mt-8 vale-card overflow-hidden rounded-2xl">
           {legacyTransactionCount > 0 ? (
-            <div className="flex justify-end border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="flex justify-end border-b border-[rgba(255,255,255,0.08)] bg-[#20242E] px-4 py-3">
               <button
                 type="button"
                 onClick={openAssignAccountModal}
-                className="rounded-full border border-[#1B4332] px-4 py-2 text-sm font-semibold text-[#1B4332] transition hover:bg-[#1B4332]/5"
+                className="rounded-full border border-[rgba(99,179,237,0.3)] px-4 py-2 text-sm font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.06)]"
               >
                 ⚙️ Assign Akun ke Transaksi Lama
               </button>
             </div>
           ) : null}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-[#1B4332] text-left text-sm font-semibold text-white">
+            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.04)] bg-[#1A1D25]">
+              <thead className="vale-table-header text-left text-sm">
                 <tr>
                   <th className="px-4 py-3">Tanggal</th>
                   <th className="px-4 py-3">Akun</th>
@@ -1850,7 +1849,7 @@ export default function DashboardPage() {
                   <th className="px-4 py-3">Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white text-sm">
+              <tbody className="divide-y divide-[rgba(255,255,255,0.04)] bg-[#1A1D25] text-sm">
                 {filteredTransactions.length > 0 ? (
                   filteredTransactions.map(({ transaction, originalIndex }, index) => {
                     const noteKey = getTransactionNoteKey(transaction);
@@ -1866,30 +1865,27 @@ export default function DashboardPage() {
                     return (
                     <tr
                       key={`${transaction?.tanggal || "trx"}-${originalIndex}-${index}`}
-                      className="group transition-colors hover:bg-slate-50"
+                      className="group transition-colors hover:bg-[rgba(255,255,255,0.02)]"
                     >
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-[#8B92A5]">
                         {transaction?.tanggal || "-"}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-[#8B92A5]">
                         {account ? (
-                          <span
-                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-white"
-                            style={{ backgroundColor: account.warna || "#1B4332" }}
-                          >
+                          <span className="vale-account-badge inline-flex items-center">
                             {getAccountShortLabel(account)}
                           </span>
                         ) : (
                           "-"
                         )}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-[#8B92A5]">
                         {transaction?.deskripsi || "-"}
                       </td>
                       <td className={`px-4 py-3 ${amountDisplay.className}`}>
                         {amountDisplay.text}
                       </td>
-                      <td className="px-4 py-3 text-slate-700">
+                      <td className="px-4 py-3 text-[#8B92A5]">
                         <select
                           value={normalizeKategori(transaction?.kategori)}
                           onChange={(event) =>
@@ -1899,7 +1895,7 @@ export default function DashboardPage() {
                               transaction?.kategori,
                             )
                           }
-                          className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm outline-none focus:border-[#1B4332]"
+                          className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
                         >
                           {(transaction?.jenis === "income"
                             ? incomeCategoryOptions
@@ -1916,7 +1912,7 @@ export default function DashboardPage() {
                       </td>
                       <td
                         ref={isEditingNote ? noteEditorRef : null}
-                        className="px-4 py-3 text-slate-700"
+                        className="px-4 py-3 text-[#8B92A5]"
                       >
                         <TransactionNoteCell
                           transaction={transaction}
@@ -1937,7 +1933,7 @@ export default function DashboardPage() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-4 py-8 text-center text-[#8B92A5]">
                       {monthFilteredTransactions.length > 0
                         ? "Tidak ada transaksi pada kategori ini."
                         : "Belum ada data transaksi. Silakan upload statement terlebih dahulu."}
@@ -1957,22 +1953,22 @@ export default function DashboardPage() {
       />
 
       {showAssignAccountModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-[#1B4332]">Assign Akun</h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-[#63B3ED]">Assign Akun</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
               {legacyTransactionCount} transaksi belum punya akun. Assign ke akun
               mana?
             </p>
 
             {accounts.length > 0 ? (
               <>
-                <label className="mt-5 block text-sm font-semibold text-slate-700">
+                <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
                   Pilih Akun
                   <select
                     value={assignAccountId}
                     onChange={(event) => setAssignAccountId(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                    className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm"
                   >
                     {accounts.map((account) => (
                       <option key={account.id} value={account.id}>
@@ -1986,14 +1982,14 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={handleAssignLegacyTransactions}
-                    className="flex-1 rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                    className="flex-1 btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
                   >
                     Assign
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAssignAccountModal(false)}
-                    className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -2001,13 +1997,13 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <p className="mt-4 text-sm text-slate-600">
+                <p className="mt-4 text-sm text-[#8B92A5]">
                   Belum ada akun. Tambah akun dulu di halaman Akun.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowAssignAccountModal(false)}
-                  className="mt-6 w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Tutup
                 </button>
@@ -2018,33 +2014,33 @@ export default function DashboardPage() {
       ) : null}
 
       {showCategoryModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-[#1B4332]">Buat Kategori Baru</h3>
-            <p className="mt-1 text-sm text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-[#63B3ED]">Buat Kategori Baru</h3>
+            <p className="mt-1 text-sm text-[#8B92A5]">
               Tambahkan kategori custom untuk transaksi kamu
             </p>
 
-            <label className="mt-5 block text-sm font-semibold text-slate-700">
+            <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
               Nama Kategori
               <input
                 type="text"
                 value={newCategoryName}
                 onChange={(event) => setNewCategoryName(event.target.value)}
                 placeholder="Contoh: Pendidikan Anak"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
               />
             </label>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Jenis Kategori:</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Jenis Kategori:</p>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 onClick={() => setNewCategoryType("income")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   newCategoryType === "income"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "btn-primary"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💰 Pemasukan
@@ -2054,15 +2050,15 @@ export default function DashboardPage() {
                 onClick={() => setNewCategoryType("expense")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   newCategoryType === "expense"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "btn-primary"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💸 Pengeluaran
               </button>
             </div>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Pilih Emoji</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Pilih Emoji</p>
             <div className="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
@@ -2071,8 +2067,8 @@ export default function DashboardPage() {
                   onClick={() => setSelectedEmoji(emoji)}
                   className={`rounded-xl border p-2 text-xl transition ${
                     selectedEmoji === emoji
-                      ? "border-[#1B4332] bg-[#1B4332]/10"
-                      : "border-slate-200 hover:border-[#1B4332]/40"
+                      ? "border-[#63B3ED] bg-[#63B3ED]/10"
+                      : "border-[rgba(255,255,255,0.08)] hover:border-[#63B3ED]/40"
                   }`}
                 >
                   {emoji}
@@ -2084,14 +2080,14 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleCreateCategory}
-                className="flex-1 rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                className="flex-1 btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
               >
                 Buat Kategori
               </button>
               <button
                 type="button"
                 onClick={closeCategoryModal}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -2101,32 +2097,32 @@ export default function DashboardPage() {
       ) : null}
 
       {showEditCategoryModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-[#1B4332]">Edit Kategori</h3>
-            <p className="mt-1 text-sm text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-[#63B3ED]">Edit Kategori</h3>
+            <p className="mt-1 text-sm text-[#8B92A5]">
               Ubah nama dan emoji kategori
             </p>
 
-            <label className="mt-5 block text-sm font-semibold text-slate-700">
+            <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
               Nama Kategori
               <input
                 type="text"
                 value={editCategoryName}
                 onChange={(event) => setEditCategoryName(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-[#1B4332]"
+                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
               />
             </label>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Jenis Kategori:</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Jenis Kategori:</p>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
                 onClick={() => setEditCategoryType("income")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   editCategoryType === "income"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "btn-primary"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💰 Pemasukan
@@ -2136,15 +2132,15 @@ export default function DashboardPage() {
                 onClick={() => setEditCategoryType("expense")}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   editCategoryType === "expense"
-                    ? "bg-[#1B4332] text-white"
-                    : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    ? "btn-primary"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💸 Pengeluaran
               </button>
             </div>
 
-            <p className="mt-5 text-sm font-semibold text-slate-700">Pilih Emoji</p>
+            <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Pilih Emoji</p>
             <div className="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
@@ -2153,8 +2149,8 @@ export default function DashboardPage() {
                   onClick={() => setEditSelectedEmoji(emoji)}
                   className={`rounded-xl border p-2 text-xl transition ${
                     editSelectedEmoji === emoji
-                      ? "border-[#1B4332] bg-[#1B4332]/10"
-                      : "border-slate-200 hover:border-[#1B4332]/40"
+                      ? "border-[#63B3ED] bg-[#63B3ED]/10"
+                      : "border-[rgba(255,255,255,0.08)] hover:border-[#63B3ED]/40"
                   }`}
                 >
                   {emoji}
@@ -2166,14 +2162,14 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={handleSaveEditCategory}
-                className="flex-1 rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+                className="flex-1 btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
               >
                 Simpan
               </button>
               <button
                 type="button"
                 onClick={closeEditCategoryModal}
-                className="flex-1 rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -2183,17 +2179,17 @@ export default function DashboardPage() {
       ) : null}
 
       {showCategoryTypeWarning ? (
-        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-[#1B4332]">
+        <div className="fixed inset-0 z-[55] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-lg vale-modal w-full rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#63B3ED]">
               ⚠️ Tidak Bisa Ganti Jenis Kategori
             </h3>
-            <p className="mt-3 text-sm leading-relaxed text-slate-700">
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
               Kategori &apos;{editingCategoryName}&apos; masih digunakan oleh{" "}
               {categoryTypeWarningTransactions.length} transaksi. Tolong pindahkan
               semua transaksi ke kategori lain sebelum mengganti jenisnya.
             </p>
-            <ul className="mt-4 space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
+            <ul className="mt-4 space-y-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#20242E] p-3 text-sm">
               {categoryTypeWarningTransactions.slice(0, 5).map((transaction, index) => {
                 const debit = parseAmount(transaction?.debit);
                 const kredit = parseAmount(transaction?.kredit);
@@ -2202,19 +2198,19 @@ export default function DashboardPage() {
                     key={`${transaction?.tanggal || "trx"}-${index}`}
                     className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3"
                   >
-                    <span className="shrink-0 text-slate-500">
+                    <span className="shrink-0 text-[#8B92A5]">
                       {transaction?.tanggal || "-"}
                     </span>
-                    <span className="min-w-0 flex-1 text-slate-800">
+                    <span className="min-w-0 flex-1 text-[#ECEEF2]">
                       {transaction?.deskripsi || "-"}
                     </span>
                     <span className="shrink-0 font-medium">
                       {debit > 0 ? (
-                        <span className="text-red-600">{formatRupiah(debit)}</span>
+                        <span className="text-[#FC8181]">{formatRupiah(debit)}</span>
                       ) : kredit > 0 ? (
-                        <span className="text-green-600">{formatRupiah(kredit)}</span>
+                        <span className="text-[#68D391]">{formatRupiah(kredit)}</span>
                       ) : (
-                        <span className="text-slate-400">-</span>
+                        <span className="text-[#8B92A5]">-</span>
                       )}
                     </span>
                   </li>
@@ -2222,14 +2218,14 @@ export default function DashboardPage() {
               })}
             </ul>
             {categoryTypeWarningTransactions.length > 5 ? (
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-[#8B92A5]">
                 dan {categoryTypeWarningTransactions.length - 5} transaksi lainnya
               </p>
             ) : null}
             <button
               type="button"
               onClick={handleDismissCategoryTypeWarning}
-              className="mt-6 w-full rounded-full bg-[#1B4332] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163728]"
+              className="mt-6 w-full btn-primary rounded-full px-4 py-2.5 text-sm font-semibold transition btn-primary"
             >
               OK, Mengerti
             </button>
@@ -2238,11 +2234,11 @@ export default function DashboardPage() {
       ) : null}
 
       {showCategoryRulesModal ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="flex w-full max-w-lg max-h-[500px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-lg font-bold text-[#1B4332]">Aturan Tersimpan</h3>
-              <p className="mt-1 text-sm text-slate-600">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="flex w-full max-w-lg max-h-[500px] flex-col overflow-hidden vale-modal rounded-2xl shadow-xl">
+            <div className="border-b border-[rgba(255,255,255,0.08)] px-6 py-5">
+              <h3 className="text-lg font-bold text-[#63B3ED]">Aturan Tersimpan</h3>
+              <p className="mt-1 text-sm text-[#8B92A5]">
                 Aturan ini diterapkan otomatis saat upload statement baru
               </p>
               <div className="mt-4 flex gap-2">
@@ -2251,8 +2247,8 @@ export default function DashboardPage() {
                   onClick={() => setRulesSettingsTab("category")}
                   className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                     rulesSettingsTab === "category"
-                      ? "bg-[#1B4332] text-white"
-                      : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                      ? "btn-primary"
+                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                   }`}
                 >
                   Aturan Kategori
@@ -2262,8 +2258,8 @@ export default function DashboardPage() {
                   onClick={() => setRulesSettingsTab("notes")}
                   className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                     rulesSettingsTab === "notes"
-                      ? "bg-[#1B4332] text-white"
-                      : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                      ? "btn-primary"
+                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                   }`}
                 >
                   Aturan Notes
@@ -2278,15 +2274,15 @@ export default function DashboardPage() {
                     {savedCategoryRules.map((rule) => (
                       <li
                         key={`${rule.keyword}-${rule.createdAt || rule.kategori}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#20242E]"
                       >
-                        <span className="min-w-0 flex-1 text-sm text-slate-800">
+                        <span className="min-w-0 flex-1 text-sm text-[#ECEEF2]">
                           {rule.keyword} → {rule.kategori}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleDeleteCategoryRule(rule.keyword)}
-                          className="shrink-0 rounded-full px-2 py-1 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                          className="shrink-0 rounded-full px-2 py-1 text-[#8B92A5] transition hover:bg-red-50 hover:text-[#FC8181]"
                           aria-label={`Hapus aturan ${rule.keyword}`}
                         >
                           ×
@@ -2295,7 +2291,7 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[#8B92A5]">
                     Belum ada aturan kategori tersimpan. Aturan dibuat otomatis saat
                     kamu menerapkan kategori ke transaksi serupa.
                   </p>
@@ -2305,15 +2301,15 @@ export default function DashboardPage() {
                   {savedNotesRules.map((rule) => (
                     <li
                       key={`${rule.keyword}-${rule.createdAt || rule.notes}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3 transition hover:bg-slate-50"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#20242E]"
                     >
-                      <span className="min-w-0 flex-1 text-sm text-slate-800">
+                      <span className="min-w-0 flex-1 text-sm text-[#ECEEF2]">
                         {rule.keyword} → &apos;{rule.notes}&apos;
                       </span>
                       <button
                         type="button"
                         onClick={() => handleDeleteNotesRule(rule.keyword)}
-                        className="shrink-0 rounded-full px-2 py-1 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                        className="shrink-0 rounded-full px-2 py-1 text-[#8B92A5] transition hover:bg-red-50 hover:text-[#FC8181]"
                         aria-label={`Hapus aturan notes ${rule.keyword}`}
                       >
                         ×
@@ -2322,18 +2318,18 @@ export default function DashboardPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[#8B92A5]">
                   Belum ada aturan notes tersimpan. Aturan dibuat otomatis saat kamu
                   menerapkan notes ke transaksi serupa.
                 </p>
               )}
             </div>
 
-            <div className="border-t border-slate-200 px-6 py-4">
+            <div className="border-t border-[rgba(255,255,255,0.08)] px-6 py-4">
               <button
                 type="button"
                 onClick={() => setShowCategoryRulesModal(false)}
-                className="w-full rounded-full border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Tutup
               </button>
@@ -2343,19 +2339,19 @@ export default function DashboardPage() {
       ) : null}
 
       {notesRulePrompt ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="flex w-full max-w-2xl max-h-[500px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-lg font-bold text-[#1B4332]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="flex w-full max-w-2xl max-h-[500px] flex-col overflow-hidden vale-modal rounded-2xl shadow-xl">
+            <div className="border-b border-[rgba(255,255,255,0.08)] px-6 py-5">
+              <h3 className="text-lg font-bold text-[#63B3ED]">
                 Terapkan Notes ke Transaksi Serupa?
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[#8B92A5]">
                 Pilih transaksi yang mau diberi catatan &apos;{notesRulePrompt.newNotes}&apos;
               </p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-3">
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-slate-100">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]">
                 <input
                   type="checkbox"
                   checked={
@@ -2364,12 +2360,12 @@ export default function DashboardPage() {
                     notesRulePrompt.matchingIndices.length > 0
                   }
                   onChange={(event) => handleToggleNoteSelectAll(event.target.checked)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#1B4332]"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
                 />
-                <span className="text-sm font-semibold text-slate-800">Pilih Semua</span>
+                <span className="text-sm font-semibold text-[#ECEEF2]">Pilih Semua</span>
               </label>
 
-              <div className="mt-1 divide-y divide-slate-100">
+              <div className="mt-1 divide-y divide-[rgba(255,255,255,0.04)]">
                 {notesRulePrompt.matchingIndices.map((transactionIndex) => {
                   const transaction = transactions[transactionIndex];
                   const debit = parseAmount(transaction?.debit);
@@ -2381,7 +2377,7 @@ export default function DashboardPage() {
                   return (
                     <label
                       key={transactionIndex}
-                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-slate-100"
+                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]"
                     >
                       <input
                         type="checkbox"
@@ -2392,23 +2388,23 @@ export default function DashboardPage() {
                             event.target.checked,
                           )
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#1B4332]"
+                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
                       />
                       <div className="min-w-0 flex-1 text-sm">
                         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <span className="shrink-0 text-slate-500">
+                          <span className="shrink-0 text-[#8B92A5]">
                             {transaction?.tanggal || "-"}
                           </span>
-                          <span className="min-w-0 flex-1 text-slate-800">
+                          <span className="min-w-0 flex-1 text-[#ECEEF2]">
                             {transaction?.deskripsi || "-"}
                           </span>
                           <span className="shrink-0 font-medium">
                             {debit > 0 ? (
-                              <span className="text-red-600">{formatRupiah(debit)}</span>
+                              <span className="text-[#FC8181]">{formatRupiah(debit)}</span>
                             ) : kredit > 0 ? (
-                              <span className="text-green-600">{formatRupiah(kredit)}</span>
+                              <span className="text-[#68D391]">{formatRupiah(kredit)}</span>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-[#8B92A5]">-</span>
                             )}
                           </span>
                         </div>
@@ -2419,22 +2415,22 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-6 py-4">
-              <span className="text-sm text-slate-600">
+            <div className="flex items-center justify-between gap-4 border-t border-[rgba(255,255,255,0.08)] px-6 py-4">
+              <span className="text-sm text-[#8B92A5]">
                 [{notesRulePrompt.selectedIndices.length}] transaksi dipilih
               </span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleApplyThisNoteOnly}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Transaksi Ini Saja
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelNotesRule}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Batal
                 </button>
@@ -2442,7 +2438,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={handleApplyNotesRule}
                   disabled={notesRulePrompt.selectedIndices.length === 0}
-                  className="rounded-full bg-[#1B4332] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#163728] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Terapkan
                 </button>
@@ -2453,20 +2449,20 @@ export default function DashboardPage() {
       ) : null}
 
       {categoryRulePrompt ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4">
-          <div className="flex w-full max-w-2xl max-h-[500px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="border-b border-slate-200 px-6 py-5">
-              <h3 className="text-lg font-bold text-[#1B4332]">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="flex w-full max-w-2xl max-h-[500px] flex-col overflow-hidden vale-modal rounded-2xl shadow-xl">
+            <div className="border-b border-[rgba(255,255,255,0.08)] px-6 py-5">
+              <h3 className="text-lg font-bold text-[#63B3ED]">
                 Terapkan Kategori ke Transaksi Serupa?
               </h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[#8B92A5]">
                 Pilih transaksi yang mau dikategorikan sebagai &apos;
                 {categoryRulePrompt.newCategory}&apos;
               </p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-3">
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-slate-100">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]">
                 <input
                   type="checkbox"
                   checked={
@@ -2475,12 +2471,12 @@ export default function DashboardPage() {
                     categoryRulePrompt.matchingIndices.length > 0
                   }
                   onChange={(event) => handleToggleSelectAll(event.target.checked)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#1B4332]"
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
                 />
-                <span className="text-sm font-semibold text-slate-800">Pilih Semua</span>
+                <span className="text-sm font-semibold text-[#ECEEF2]">Pilih Semua</span>
               </label>
 
-              <div className="mt-1 divide-y divide-slate-100">
+              <div className="mt-1 divide-y divide-[rgba(255,255,255,0.04)]">
                 {categoryRulePrompt.matchingIndices.map((transactionIndex) => {
                   const transaction = transactions[transactionIndex];
                   const debit = parseAmount(transaction?.debit);
@@ -2492,7 +2488,7 @@ export default function DashboardPage() {
                   return (
                     <label
                       key={transactionIndex}
-                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-slate-100"
+                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]"
                     >
                       <input
                         type="checkbox"
@@ -2503,23 +2499,23 @@ export default function DashboardPage() {
                             event.target.checked,
                           )
                         }
-                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#1B4332]"
+                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
                       />
                       <div className="min-w-0 flex-1 text-sm">
                         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <span className="shrink-0 text-slate-500">
+                          <span className="shrink-0 text-[#8B92A5]">
                             {transaction?.tanggal || "-"}
                           </span>
-                          <span className="min-w-0 flex-1 text-slate-800">
+                          <span className="min-w-0 flex-1 text-[#ECEEF2]">
                             {transaction?.deskripsi || "-"}
                           </span>
                           <span className="shrink-0 font-medium">
                             {debit > 0 ? (
-                              <span className="text-red-600">{formatRupiah(debit)}</span>
+                              <span className="text-[#FC8181]">{formatRupiah(debit)}</span>
                             ) : kredit > 0 ? (
-                              <span className="text-green-600">{formatRupiah(kredit)}</span>
+                              <span className="text-[#68D391]">{formatRupiah(kredit)}</span>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-[#8B92A5]">-</span>
                             )}
                           </span>
                         </div>
@@ -2530,22 +2526,22 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 border-t border-slate-200 px-6 py-4">
-              <span className="text-sm text-slate-600">
+            <div className="flex items-center justify-between gap-4 border-t border-[rgba(255,255,255,0.08)] px-6 py-4">
+              <span className="text-sm text-[#8B92A5]">
                 [{categoryRulePrompt.selectedIndices.length}] transaksi dipilih
               </span>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleApplyThisTransactionOnly}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Transaksi Ini Saja
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelCategoryRule}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Batal
                 </button>
@@ -2553,7 +2549,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={handleApplyCategoryRule}
                   disabled={categoryRulePrompt.selectedIndices.length === 0}
-                  className="rounded-full bg-[#1B4332] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#163728] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Terapkan
                 </button>
@@ -2564,32 +2560,32 @@ export default function DashboardPage() {
       ) : null}
 
       {toastMessage ? (
-        <div className="fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1B4332] px-5 py-3 text-sm font-semibold text-white shadow-lg">
+        <div className="fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 vale-toast rounded-lg px-5 py-3 text-sm font-semibold">
           {toastMessage}
         </div>
       ) : null}
 
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         {isChatOpen ? (
-          <div className="flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-[#1B4332] px-4 py-3 text-white">
+          <div className="flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#20242E] px-4 py-3">
               <div>
-                <p className="font-semibold">💰 Financial Advisor</p>
-                <p className="text-xs text-white/80">
+                <p className="font-semibold text-[#ECEEF2]">💰 Financial Advisor</p>
+                <p className="text-xs text-[#8B92A5]">
                   {userMessageCount}/{MAX_CHAT_MESSAGES}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsChatOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-lg hover:bg-white/30"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(255,255,255,0.06)] text-lg text-[#8B92A5] hover:bg-[rgba(255,255,255,0.1)] hover:text-[#ECEEF2]"
                 aria-label="Tutup chat"
               >
                 ×
               </button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-[#1A1D25] p-4">
               {chatMessages.map((msg, index) => (
                 <div
                   key={`chat-${index}`}
@@ -2598,8 +2594,8 @@ export default function DashboardPage() {
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                       msg.role === "user"
-                        ? "bg-[#1B4332] text-white"
-                        : "bg-slate-200 text-slate-800"
+                        ? "bg-[#63B3ED] text-[#111318] font-medium"
+                        : "bg-[#20242E] text-[#ECEEF2]"
                     }`}
                   >
                     {msg.content}
@@ -2608,20 +2604,20 @@ export default function DashboardPage() {
               ))}
               {isChatLoading ? (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl bg-slate-200 px-3 py-2 text-sm text-slate-600">
+                  <div className="rounded-2xl bg-[#20242E] px-3 py-2 text-sm text-[#8B92A5]">
                     Sedang mengetik...
                   </div>
                 </div>
               ) : null}
               {isChatLimitReached ? (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <div className="rounded-xl border border-[rgba(246,173,85,0.3)] bg-[rgba(246,173,85,0.05)] px-3 py-2 text-sm text-[#F6AD55]">
                   {CHAT_LIMIT_MESSAGE}
                 </div>
               ) : null}
               <div ref={chatEndRef} />
             </div>
 
-            <div className="border-t border-slate-200 bg-white p-3">
+            <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#1A1D25] p-3">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -2634,13 +2630,13 @@ export default function DashboardPage() {
                   placeholder={
                     isChatLimitReached ? "Batas chat tercapai" : "Tanya tentang keuanganmu..."
                   }
-                  className="flex-1 rounded-full border border-slate-300 px-4 py-2 text-sm outline-none focus:border-[#1B4332] disabled:bg-slate-100"
+                  className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm outline-none focus:border-[#63B3ED] disabled:bg-[#20242E]"
                 />
                 <button
                   type="button"
                   onClick={handleSendChat}
                   disabled={isChatLoading || isChatLimitReached || !chatInput.trim()}
-                  className="rounded-full bg-[#1B4332] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#163728] disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="btn-primary rounded-full px-4 py-2 text-sm disabled:cursor-not-allowed"
                 >
                   Kirim
                 </button>
@@ -2652,7 +2648,7 @@ export default function DashboardPage() {
         <button
           type="button"
           onClick={() => (isChatOpen ? setIsChatOpen(false) : openChat())}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-[#1B4332] text-2xl text-white shadow-lg transition hover:bg-[#163728]"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-[#63B3ED] text-2xl text-[#111318] shadow-[0_4px_12px_rgba(99,179,237,0.2)] transition hover:bg-[#90CDF4]"
           aria-label="Buka chat financial advisor"
         >
           💬
