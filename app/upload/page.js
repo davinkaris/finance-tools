@@ -23,6 +23,21 @@ const STAGES = [
   { label: "Selesai!", progress: 100 },
 ];
 
+const ERROR_BOX_STYLE = {
+  background: "rgba(252,129,129,0.08)",
+  border: "1px solid rgba(252,129,129,0.3)",
+  borderRadius: "12px",
+  padding: "16px",
+  color: "#FC8181",
+};
+
+function isPasswordRelatedError(message) {
+  const normalized = String(message || "").toLowerCase();
+  return (
+    normalized.includes("password protected") || normalized.includes("password")
+  );
+}
+
 export default function UploadPage() {
   return (
     <Suspense
@@ -47,6 +62,7 @@ function UploadPageContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const [stageLabel, setStageLabel] = useState("");
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +100,23 @@ function UploadPageContent() {
     setStageLabel("");
   };
 
+  const clearFileSelection = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleUploadFailure = (message) => {
+    resetProgress();
+    if (isPasswordRelatedError(message)) {
+      clearFileSelection();
+      setUploadError("password");
+      return;
+    }
+    setUploadError(message || "Terjadi kesalahan.");
+  };
+
   const handlePickFile = () => {
     fileInputRef.current?.click();
   };
@@ -99,12 +132,13 @@ function UploadPageContent() {
       file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
     if (!isPdf) {
-      alert("File harus berformat PDF.");
       if (inputElement) inputElement.value = "";
       setSelectedFile(null);
+      setUploadError("File harus berformat PDF.");
       return;
     }
 
+    setUploadError(null);
     setSelectedFile(file);
   };
 
@@ -120,16 +154,15 @@ function UploadPageContent() {
   };
 
   const handleRemoveFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    clearFileSelection();
+    setUploadError(null);
   };
 
   const handleAnalyze = async () => {
     if (!selectedFile || !selectedAccountId || isLoading) return;
 
     setIsLoading(true);
+    setUploadError(null);
     setStage(0);
 
     try {
@@ -150,7 +183,10 @@ function UploadPageContent() {
 
       if (!response.ok) {
         const errorResult = await response.json();
-        throw new Error(errorResult?.error || "Gagal menganalisa statement.");
+        handleUploadFailure(
+          errorResult?.error || "Gagal menganalisa statement.",
+        );
+        return;
       }
 
       setStage(1);
@@ -223,8 +259,7 @@ function UploadPageContent() {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Terjadi kesalahan.";
-      alert(message);
-      resetProgress();
+      handleUploadFailure(message);
     } finally {
       setIsLoading(false);
     }
@@ -380,6 +415,74 @@ function UploadPageContent() {
               >
                 Pilih File
               </button>
+
+              {uploadError === "password" ? (
+                <div
+                  className="mt-6 w-full text-left text-sm leading-relaxed"
+                  style={ERROR_BOX_STYLE}
+                  role="alert"
+                >
+                  <p className="font-semibold">🔒 PDF ini password protected</p>
+                  <p className="mt-3">Buka PDF di Preview (Mac):</p>
+                  <ol className="mt-2 list-decimal space-y-1 pl-5">
+                    <li>Double click file PDF</li>
+                    <li>File → Export as PDF</li>
+                    <li>Hilangkan password → Save</li>
+                    <li>Upload file baru yang sudah disave</li>
+                  </ol>
+                </div>
+              ) : uploadError ? (
+                <div
+                  className="mt-6 w-full text-left text-sm leading-relaxed"
+                  style={ERROR_BOX_STYLE}
+                  role="alert"
+                >
+                  {uploadError}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div
+            className="mx-auto mt-4 w-full max-w-2xl text-left"
+            style={{
+              background: "rgba(99,179,237,0.08)",
+              border: "1px solid rgba(99,179,237,0.2)",
+              borderRadius: "12px",
+              padding: "16px",
+              fontSize: "13px",
+              color: "#8B92A5",
+            }}
+          >
+            <div className="flex gap-3">
+              <span className="shrink-0 text-base leading-none" aria-hidden="true">
+                💡
+              </span>
+              <div className="min-w-0 space-y-3 leading-relaxed">
+                <p className="font-medium text-[#ECEEF2]">
+                  Tips: Pastikan PDF tidak password protected
+                </p>
+                <div>
+                  <p className="mb-2">Cara download statement tanpa password:</p>
+                  <ul className="list-none space-y-1.5 pl-0">
+                    <li>
+                      <span className="text-[#63B3ED]">•</span> Bank Jago: Mutasi → Export PDF → pilih tanpa enkripsi
+                    </li>
+                    <li>
+                      <span className="text-[#63B3ED]">•</span> BCA: KlikBCA → e-Statement → Download (tidak perlu password)
+                    </li>
+                    <li>
+                      <span className="text-[#63B3ED]">•</span> Mandiri: Livin → Rekening Koran → Download PDF
+                    </li>
+                    <li>
+                      <span className="text-[#63B3ED]">•</span> CIMB: OCTO Mobile → Rekening Koran → Export PDF
+                    </li>
+                  </ul>
+                </div>
+                <p>
+                  Kalau PDF kamu password protected, buka dulu di Preview (Mac) atau Adobe Reader, lalu save ulang tanpa password.
+                </p>
+              </div>
             </div>
           </div>
 

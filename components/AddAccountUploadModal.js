@@ -11,6 +11,9 @@ import {
 } from "../lib/transactionMatching";
 import { deduplicateTransactions } from "../lib/transactions";
 import { addUploadHistoryEntry } from "../lib/uploadHistory";
+import PdfPasswordFields, {
+  PDF_PASSWORD_UNSUPPORTED_CODE,
+} from "./PdfPasswordFields";
 
 const BANK_OPTIONS = [
   "Jago",
@@ -102,6 +105,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
   const [skippedUpload, setSkippedUpload] = useState(false);
   const [uploadedCount, setUploadedCount] = useState(0);
   const [duplicateCount, setDuplicateCount] = useState(0);
+  const [pdfPasswordProtected, setPdfPasswordProtected] = useState(false);
+  const [pdfPassword, setPdfPassword] = useState("");
+  const [showPdfPassword, setShowPdfPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
   const fileInputRef = useRef(null);
   const wasOpenRef = useRef(false);
 
@@ -123,6 +130,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
     setSkippedUpload(false);
     setUploadedCount(0);
     setDuplicateCount(0);
+    setPdfPasswordProtected(false);
+    setPdfPassword("");
+    setShowPdfPassword(false);
+    setPasswordError("");
   };
 
   useEffect(() => {
@@ -162,6 +173,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
     }
 
     setSelectedFile(file);
+    setPdfPasswordProtected(false);
+    setPdfPassword("");
+    setShowPdfPassword(false);
+    setPasswordError("");
   };
 
   const handleStep1Continue = () => {
@@ -191,6 +206,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
     if (!selectedFile || !createdAccount || isUploading) return;
 
     setIsUploading(true);
+    setPasswordError("");
     setUploadStage(0);
 
     try {
@@ -206,6 +222,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
         formData.append("notesRules", JSON.stringify(savedNotesRules));
       }
 
+      if (pdfPasswordProtected && pdfPassword.trim()) {
+        formData.append("pdfPassword", pdfPassword.trim());
+      }
+
       const response = await fetch("/api/parse-statement", {
         method: "POST",
         body: formData,
@@ -213,6 +233,12 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
 
       if (!response.ok) {
         const errorResult = await response.json();
+        if (errorResult?.code === PDF_PASSWORD_UNSUPPORTED_CODE) {
+          setPasswordError(errorResult.error);
+          setProgressPercent(0);
+          setStageLabel("");
+          return;
+        }
         throw new Error(errorResult?.error || "Gagal menganalisa statement.");
       }
 
@@ -419,9 +445,24 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
                   Drag &amp; drop PDF di sini
                 </p>
                 {selectedFile ? (
-                  <p className="mt-2 max-w-full truncate text-xs text-[#8B92A5]">
-                    {selectedFile.name}
-                  </p>
+                  <>
+                    <p className="mt-2 max-w-full truncate text-xs text-[#8B92A5]">
+                      {selectedFile.name}
+                    </p>
+                    <PdfPasswordFields
+                      enabled={pdfPasswordProtected}
+                      onEnabledChange={setPdfPasswordProtected}
+                      password={pdfPassword}
+                      onPasswordChange={(value) => {
+                        setPdfPassword(value);
+                        if (passwordError) setPasswordError("");
+                      }}
+                      showPassword={showPdfPassword}
+                      onShowPasswordChange={setShowPdfPassword}
+                      passwordError={passwordError}
+                      disabled={isUploading}
+                    />
+                  </>
                 ) : null}
                 <button
                   type="button"

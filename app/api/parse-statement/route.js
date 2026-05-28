@@ -1,6 +1,12 @@
 import { applyCategoryRulesWithCount } from "../../../lib/categoryRules";
 import { applyNotesRulesWithCount } from "../../../lib/notesRules";
 import {
+  buildExtractPrompt,
+  isPdfEncrypted,
+  isPdfProcessingFailure,
+  pdfPasswordUnsupportedResponse,
+} from "../../../lib/pdfPassword";
+import {
   buildIncomeCategoryNames,
   inferJenisFromAmounts,
   processTransaction,
@@ -74,8 +80,26 @@ export async function POST(request) {
     const accountId = formData.get("accountId")
       ? String(formData.get("accountId"))
       : null
+    const pdfPasswordRaw = formData.get("pdfPassword")
+    const pdfPassword =
+      pdfPasswordRaw && String(pdfPasswordRaw).trim()
+        ? String(pdfPasswordRaw).trim()
+        : null
+
+    if (!file || typeof file.arrayBuffer !== "function") {
+      return Response.json({ error: "File tidak ditemukan." }, { status: 400 })
+    }
+
     const bytes = await file.arrayBuffer()
+    const encrypted = isPdfEncrypted(bytes)
     const base64Data = Buffer.from(bytes).toString("base64")
+    const extractPrompt = buildExtractPrompt(pdfPassword)
+
+    if (encrypted && pdfPassword) {
+      console.log(
+        "Encrypted PDF with password — sending to Claude with password hint (no server decrypt)",
+      )
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -100,7 +124,7 @@ export async function POST(request) {
             },
             {
               type: "text",
-              text: "Extract semua transaksi yang ada, maksimal 50 transaksi dari bank statement ini. Return HANYA JSON array dengan format: [{\"tanggal\":\"DD/MM/YYYY\",\"deskripsi\":\"...\",\"debit\":0,\"kredit\":0,\"saldo\":0}]. Jangan return apapun selain JSON murni."
+              text: extractPrompt,
             }
           ]
         }]
@@ -112,17 +136,36 @@ export async function POST(request) {
 
     if (!response.ok) {
       console.error("API error:", completion)
-      return Response.json(
-        { error: completion?.error?.message || "Claude API error" }, 
-        { status: 502 }
-      )
+      const apiMessage = completion?.error?.message || "Claude API error"
+
+      if (
+        (pdfPassword || encrypted) &&
+        isPdfProcessingFailure(apiMessage, response.status)
+      ) {
+        return pdfPasswordUnsupportedResponse()
+      }
+
+      return Response.json({ error: apiMessage }, { status: 502 })
     }
 
     const text = completion?.content?.find(i => i.type === "text")?.text ?? ""
     console.log("Claude response:", text)
 
-    const clean = text.replace(/```json/g,"").replace(/```/g,"").trim()
-    const transactions = JSON.parse(clean)
+    let transactions
+    try {
+      const clean = text.replace(/```json/g, "").replace(/```/g, "").trim()
+      transactions = JSON.parse(clean)
+      if (!Array.isArray(transactions)) {
+        throw new Error("Invalid transactions format")
+      }
+    } catch (parseErr) {
+      console.error("Parse error:", parseErr?.message)
+      if (pdfPassword || encrypted) {
+        return pdfPasswordUnsupportedResponse()
+      }
+      throw parseErr
+    }
+
     console.log("Parsed transactions:", transactions.length)
 
     const transactionsWithJenis = transactions.map((t) => ({
