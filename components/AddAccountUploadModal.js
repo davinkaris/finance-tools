@@ -283,8 +283,6 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
       });
 
       await saveTransactions(matchResult.transactions);
-      localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
-
       const autoAppliedCount = Number(result.autoAppliedCount || 0);
       if (autoAppliedCount > 0) {
         localStorage.setItem("autoCategoryNotification", String(autoAppliedCount));

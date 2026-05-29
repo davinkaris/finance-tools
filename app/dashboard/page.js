@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, Suspense } from "react";
 import {
   BarChart,
   Bar,
@@ -13,6 +13,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
 } from "recharts";
 import {
   applyCategoryRules,
@@ -53,6 +55,7 @@ import {
   deleteTransactionsByUpload,
   getTransactions,
   saveTransactions,
+  updateTransaction,
 } from "../../lib/transactionsStore";
 import {
   getUserPreferences,
@@ -63,7 +66,6 @@ import {
   getUploadHistory,
   removeTransactionsForUploadEntry,
 } from "../../lib/uploadHistory";
-import Navbar from "../../components/Navbar";
 import AddAccountUploadModal from "../../components/AddAccountUploadModal";
 
 function parseAmount(value) {
@@ -277,6 +279,110 @@ const formatYAxisRupiah = (value) => {
   return String(num);
 };
 
+const GLASS_CARD_CLASS = "glass-card rounded-2xl";
+
+const GLASS_TOOLTIP_STYLE = {
+  background: "rgba(17, 19, 24, 0.95)",
+  backdropFilter: "blur(40px)",
+  WebkitBackdropFilter: "blur(40px)",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  borderRadius: 12,
+  color: "#ECEEF2",
+  boxShadow:
+    "0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
+};
+
+const METRIC_CARD_CLASS = "glass-card rounded-2xl p-6";
+
+const hexToRgba = (hex, alpha) => {
+  if (!hex || !hex.startsWith("#")) return `rgba(148, 163, 184, ${alpha})`;
+  const normalized = hex.replace("#", "");
+  const full =
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((character) => character + character)
+          .join("")
+      : normalized;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if ([r, g, b].some(Number.isNaN)) return `rgba(148, 163, 184, ${alpha})`;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getTransactionRowKey = (transaction, index) =>
+  transaction?.id || `${transaction?.tanggal || "trx"}-${index}`;
+
+const parseTransactionDate = (tanggal) => {
+  const [day, month, year] = String(tanggal || "").split("/");
+  if (!day || !month || !year) return null;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+};
+
+const getPreviousMonthKey = (monthKey) => {
+  if (!monthKey) return null;
+  const [month, year] = monthKey.split("/").map(Number);
+  if (!month || !year) return null;
+  const date = new Date(year, month - 2, 1);
+  return `${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
+};
+
+const getCurrentMonthKey = () => {
+  const now = new Date();
+  return `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+};
+
+const sortCategorySummaryItems = (items, sortMode) => {
+  const withTransactions = items.filter((item) => item.count > 0);
+  const withoutTransactions = items.filter((item) => item.count === 0);
+
+  const compareName = (a, b) =>
+    a.kategori.localeCompare(b.kategori, "id", { sensitivity: "base" });
+
+  if (sortMode === "az") {
+    return [...items].sort((a, b) => {
+      if (a.count === 0 && b.count > 0) return 1;
+      if (a.count > 0 && b.count === 0) return -1;
+      return compareName(a, b);
+    });
+  }
+
+  const compareAmount =
+    sortMode === "smallest"
+      ? (a, b) => a.totalDebit - b.totalDebit
+      : (a, b) => b.totalDebit - a.totalDebit;
+
+  return [
+    ...withTransactions.sort(compareAmount),
+    ...withoutTransactions.sort(compareName),
+  ];
+};
+
+const formatTrendPercent = (value) => {
+  if (value === null || value === undefined) return null;
+  const rounded = Math.round(value);
+  if (rounded > 0) return `+${rounded}%`;
+  return `${rounded}%`;
+};
+
+const DEFAULT_ACCOUNT_COLOR = "#63B3ED";
+
+const PILL_ACTIVE_CLASS =
+  "border border-[rgba(99,179,237,0.4)] bg-[rgba(99,179,237,0.15)] text-[#63B3ED]";
+
+const PILL_INACTIVE_CLASS =
+  "border border-transparent bg-[rgba(255,255,255,0.04)] text-[#8B92A5] hover:text-[#ECEEF2]";
+
+const ACTION_CARD_ITEM_CLASS =
+  "flex flex-1 flex-col items-center rounded-xl border border-transparent px-5 py-3 text-center transition hover:border-[rgba(99,179,237,0.2)] hover:bg-[rgba(99,179,237,0.08)]";
+
+const TABLE_HEADER_CLASS =
+  "bg-[rgba(255,255,255,0.02)] text-left text-sm text-[#8B92A5]";
+
+const TABLE_ROW_CLASS =
+  "transition-colors hover:bg-[rgba(255,255,255,0.03)]";
+
 const INSIGHT_VARIANTS = [
   "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#63B3ED] bg-[rgba(99,179,237,0.05)]",
   "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#68D391] bg-[rgba(104,211,145,0.05)]",
@@ -318,10 +424,6 @@ const COLOR_OPTIONS = [
   "#ef4444",
   "#63B3ED",
 ];
-
-const QUICK_ACTION_BUTTON_CLASS =
-  "inline-flex items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-2 text-[13px] font-semibold text-[#ECEEF2] transition hover:border-[rgba(99,179,237,0.3)] hover:bg-[rgba(99,179,237,0.1)]";
-
 
 const SUGGESTION_BANKS = [
   "BCA",
@@ -431,7 +533,7 @@ const StackedBarTooltip = ({ active, payload, label }) => {
   const total = validPayload.reduce((sum, item) => sum + Number(item.value), 0);
 
   return (
-    <div className="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[#20242E] px-3 py-2.5 text-sm shadow-lg text-[#ECEEF2]">
+    <div className={`glass-card rounded-xl px-3 py-2.5 text-sm shadow-lg text-[#ECEEF2]`}>
       <p className="mb-2 font-semibold text-[#ECEEF2]">{label}</p>
       <div className="space-y-1">
         {validPayload.map((item) => {
@@ -518,6 +620,102 @@ const MonthlyStackedBarChart = ({
     </div>
   );
 };
+
+function MetricCard({ icon, title, value, subtitle, trendLabel, trendPositive, iconBg }) {
+  return (
+    <div className={METRIC_CARD_CLASS}>
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
+          style={{ backgroundColor: iconBg }}
+        >
+          {icon}
+        </div>
+        {trendLabel ? (
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+              trendPositive
+                ? "bg-[rgba(104,211,145,0.15)] text-[#68D391]"
+                : "bg-[rgba(252,129,129,0.15)] text-[#FC8181]"
+            }`}
+          >
+            {trendLabel}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-4 text-sm font-medium text-[#8B92A5]">{title}</p>
+      <p className="mt-1 text-2xl font-bold text-[#ECEEF2]">{value}</p>
+      {subtitle ? (
+        <p className="mt-1 text-xs text-[#8B92A5]">{subtitle}</p>
+      ) : null}
+    </div>
+  );
+}
+
+const DonutSpendingChart = ({ data, getColor, emojiMap }) => {
+  const chartData = data.filter((item) => item.totalDebit > 0);
+  const total = chartData.reduce((sum, item) => sum + item.totalDebit, 0);
+
+  if (total === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-[#8B92A5]">
+        Belum ada data pengeluaran untuk ditampilkan.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <div className="mx-auto h-[220px] w-full max-w-[240px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="totalDebit"
+              nameKey="kategori"
+              cx="50%"
+              cy="50%"
+              innerRadius={58}
+              outerRadius={88}
+              paddingAngle={2}
+              stroke="none"
+            >
+              {chartData.map((entry) => (
+                <Cell key={entry.kategori} fill={getColor(entry.kategori)} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value) => [`Rp ${formatChartRupiah(value)}`, ""]}
+              contentStyle={GLASS_TOOLTIP_STYLE}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 space-y-2.5">
+        {chartData.map((item) => (
+          <div
+            key={item.kategori}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-[#8B92A5]">
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: getColor(item.kategori) }}
+              />
+              <span className="truncate">
+                {emojiMap[item.kategori] || "📦"} {item.kategori}
+              </span>
+            </span>
+            <span className="shrink-0 font-semibold text-[#ECEEF2]">
+              Rp {formatRupiah(item.totalDebit)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
 const BULAN_LABEL = {
   "01": "Januari",
   "02": "Februari",
@@ -552,6 +750,256 @@ const OPENING_CHAT_MESSAGE =
 const CHAT_LIMIT_MESSAGE =
   "Kamu sudah mencapai batas chat gratis. Upgrade ke Premium untuk chat unlimited!";
 
+function CategoryInlineEditor({
+  transaction,
+  categoryOptions,
+  emojiMap,
+  getCategoryColor,
+  isOpen,
+  onToggle,
+  onClose,
+  onSelectCategory,
+  onCreateCategory,
+  feedbackState,
+  isMoveMoney,
+  onClearMoveMoney,
+}) {
+  const dropdownRef = useRef(null);
+  const [search, setSearch] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const kategori = normalizeKategori(transaction?.kategori);
+  const color = getCategoryColor(kategori);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+      setIsCreating(false);
+      return undefined;
+    }
+
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onClose]);
+
+  const filteredOptions = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return categoryOptions;
+    return categoryOptions.filter((category) => {
+      const normalized = normalizeKategori(category);
+      const emoji = emojiMap[normalized] || "📦";
+      return (
+        normalized.toLowerCase().includes(query) ||
+        emoji.includes(query)
+      );
+    });
+  }, [categoryOptions, emojiMap, search]);
+
+  const showCreateOption =
+    search.trim().length > 0 &&
+    !categoryOptions.some(
+      (category) =>
+        normalizeKategori(category).toLowerCase() === search.trim().toLowerCase(),
+    );
+
+  const handleCreate = async () => {
+    const name = search.trim();
+    if (!name || isCreating) return;
+    setIsCreating(true);
+    try {
+      await onCreateCategory(name);
+      onClose();
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  if (isMoveMoney) {
+    return (
+      <div className="flex flex-col items-start gap-1.5">
+        <span
+          className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-[#8B92A5]"
+          style={{
+            background: "rgba(139,146,165,0.1)",
+            border: "1px solid rgba(139,146,165,0.2)",
+          }}
+        >
+          ↔️ Move Money
+        </span>
+        <button
+          type="button"
+          onClick={onClearMoveMoney}
+          className="text-[11px] font-medium text-[#8B92A5] underline-offset-2 transition hover:text-[#ECEEF2] hover:underline"
+        >
+          Bukan move money?
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative inline-flex max-w-full" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`relative inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+          feedbackState === "flash" ? "category-badge-flash" : ""
+        }`}
+        style={{
+          backgroundColor: hexToRgba(color, 0.1),
+          borderColor: hexToRgba(color, 0.3),
+          color: "#ECEEF2",
+        }}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
+        <span aria-hidden="true">{emojiMap[kategori] || "📦"}</span>
+        <span className="max-w-[140px] truncate">{kategori}</span>
+        {feedbackState === "check" ? (
+          <span
+            className="category-check-pop ml-0.5 text-[10px] text-[#68D391]"
+            aria-hidden="true"
+          >
+            ✓
+          </span>
+        ) : null}
+      </button>
+
+      {isOpen ? (
+        <div className="category-dropdown-enter glass-panel absolute left-0 top-full z-50 mt-1.5 min-w-[240px] overflow-hidden rounded-xl shadow-xl">
+          <div className="border-b border-[rgba(255,255,255,0.06)] p-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Cari kategori..."
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-3 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+              autoFocus
+            />
+          </div>
+          <ul className="max-h-52 overflow-y-auto py-1" role="listbox">
+            {filteredOptions.map((category) => {
+              const normalizedCategory = normalizeKategori(category);
+              const isSelected = normalizedCategory === kategori;
+              return (
+                <li key={normalizedCategory}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => onSelectCategory(normalizedCategory)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[#ECEEF2] transition hover:bg-[rgba(99,179,237,0.08)]"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span aria-hidden="true">
+                        {emojiMap[normalizedCategory] || "📦"}
+                      </span>
+                      <span className="truncate">{normalizedCategory}</span>
+                    </span>
+                    {isSelected ? (
+                      <span className="shrink-0 text-[#68D391]" aria-hidden="true">
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          {showCreateOption ? (
+            <div className="border-t border-[rgba(255,255,255,0.06)] p-2">
+              <p className="px-1 text-xs text-[#8B92A5]">Buat kategori baru:</p>
+              <div className="mt-1.5 flex gap-2">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                />
+                <button
+                  type="button"
+                  onClick={() => void handleCreate()}
+                  disabled={isCreating || !search.trim()}
+                  className="shrink-0 rounded-lg bg-[#63B3ED] px-3 py-1.5 text-xs font-semibold text-[#111318] transition hover:bg-[#90CDF4] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Buat
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function DrawerTransactionNotesBar({
+  note,
+  isEditing,
+  draftNote,
+  onDraftChange,
+  onStartEdit,
+  onSave,
+  onCancel,
+  inputRef,
+  showSaveFlash = false,
+}) {
+  const hasNote = Boolean(note?.trim());
+
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={draftNote}
+        onChange={(event) => onDraftChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            onSave();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onCancel();
+          }
+        }}
+        className="note-input-enter w-full cursor-text rounded-lg border border-[#63B3ED] bg-[#1A1D25] px-3 py-1.5 text-xs text-[#ECEEF2] outline-none shadow-[0_0_0_3px_rgba(99,179,237,0.1)]"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onStartEdit}
+      className={`flex w-full cursor-text items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-xs transition ${
+        showSaveFlash ? "note-save-flash" : ""
+      } ${
+        hasNote
+          ? "border border-[rgba(99,179,237,0.15)] bg-[rgba(99,179,237,0.06)] text-[#8B92A5]"
+          : "border border-dashed border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.03)] text-[#555D6E]"
+      }`}
+    >
+      {hasNote ? (
+        <>
+          <span className="min-w-0 flex-1 truncate">{note}</span>
+          <span className="shrink-0 text-[10px]" aria-hidden="true">
+            ✏️
+          </span>
+        </>
+      ) : (
+        <span>✏️ Tambah catatan...</span>
+      )}
+    </button>
+  );
+}
+
 function TransactionNoteCell({
   transaction,
   note,
@@ -562,6 +1010,7 @@ function TransactionNoteCell({
   onSave,
   onCancel,
   inputRef,
+  showSaveFlash = false,
 }) {
   if (isEditing) {
     return (
@@ -581,13 +1030,17 @@ function TransactionNoteCell({
           }
         }}
         placeholder="Tambah catatan..."
-        className="w-full min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm italic text-[#8B92A5] outline-none focus:border-[#63B3ED] focus:ring-1 focus:ring-[#63B3ED]"
+        className="note-input-enter w-full min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm italic text-[#8B92A5] outline-none focus:border-[#63B3ED] focus:ring-1 focus:ring-[#63B3ED]"
       />
     );
   }
 
   return (
-    <div className="flex min-w-[120px] items-center gap-1.5">
+    <div
+      className={`group/note flex min-w-[120px] items-center gap-1.5 rounded-lg px-1 py-0.5 ${
+        showSaveFlash ? "note-save-flash" : ""
+      }`}
+    >
       {note ? (
         <span
           title={note}
@@ -599,14 +1052,14 @@ function TransactionNoteCell({
       <button
         type="button"
         onClick={onStartEdit}
-        className={`shrink-0 text-sm transition-opacity duration-200 ${
+        className={`shrink-0 rounded p-0.5 text-xs text-[#8B92A5] transition-all duration-200 hover:text-[#63B3ED] ${
           note
-            ? "opacity-70 hover:opacity-100"
-            : "opacity-0 group-hover:opacity-100"
+            ? "opacity-0 group-hover/note:opacity-100"
+            : "opacity-40 group-hover/note:opacity-100"
         }`}
         aria-label={note ? "Edit catatan" : "Tambah catatan"}
       >
-        📝
+        ✏️
       </button>
     </div>
   );
@@ -614,34 +1067,33 @@ function TransactionNoteCell({
 
 function DashboardLoadingSkeleton() {
   return (
-    <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
-      <div className="h-10 w-72 max-w-full animate-pulse rounded-lg bg-[#20242E]" />
-      <div className="mt-6 flex gap-2 overflow-hidden">
+    <main className="flex-1 overflow-y-auto bg-transparent p-6 lg:p-8">
+      <div className="h-8 w-48 animate-pulse rounded-lg bg-[rgba(255,255,255,0.04)]" />
+      <div className="mt-6 flex gap-2">
+        {[1, 2, 3].map((item) => (
+          <div
+            key={item}
+            className="h-9 w-24 animate-pulse rounded-full bg-[rgba(255,255,255,0.04)]"
+          />
+        ))}
+      </div>
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className="h-9 w-28 shrink-0 animate-pulse rounded-full bg-[#20242E]"
+            className="h-36 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.04)]"
           />
         ))}
       </div>
-      <div className="mt-8 h-14 animate-pulse rounded-2xl bg-[#20242E]" />
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <div className="h-64 animate-pulse rounded-2xl bg-[#20242E]" />
-        <div className="h-64 animate-pulse rounded-2xl bg-[#20242E]" />
-      </div>
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((item) => (
-          <div
-            key={item}
-            className="h-28 animate-pulse rounded-2xl bg-[#20242E]"
-          />
-        ))}
+      <div className="mt-8 grid gap-6 lg:grid-cols-5">
+        <div className="h-80 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.04)] lg:col-span-3" />
+        <div className="h-80 animate-pulse rounded-2xl bg-[rgba(255,255,255,0.04)] lg:col-span-2" />
       </div>
       <div className="mt-8 space-y-3">
         {[1, 2, 3, 4, 5].map((item) => (
           <div
             key={item}
-            className="h-14 animate-pulse rounded-xl bg-[#20242E]"
+            className="h-14 animate-pulse rounded-xl bg-[rgba(255,255,255,0.04)]"
           />
         ))}
       </div>
@@ -650,11 +1102,20 @@ function DashboardLoadingSkeleton() {
 }
 
 export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoadingSkeleton />}>
+      <DashboardPageContent />
+    </Suspense>
+  );
+}
+
+function DashboardPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState([]);
   const [insights, setInsights] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [categoryDrawerCategory, setCategoryDrawerCategory] = useState(null);
   const [selectedBulan, setSelectedBulan] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
@@ -668,11 +1129,17 @@ export default function DashboardPage() {
   const [deleteUploadConfirm, setDeleteUploadConfirm] = useState(null);
   const [quickActionDropdown, setQuickActionDropdown] = useState(null);
   const [aiInsightExpanded, setAiInsightExpanded] = useState(false);
+  const [isRefreshingInsights, setIsRefreshingInsights] = useState(false);
   const [userFullName, setUserFullName] = useState("");
   const [permanentlyDismissed, setPermanentlyDismissed] = useState([]);
   const [confirmDismissBank, setConfirmDismissBank] = useState(null);
   const [expandedSuggestions, setExpandedSuggestions] = useState(() => new Set());
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [addCategoryInlineSection, setAddCategoryInlineSection] = useState(null);
+  const [incomeCategorySort, setIncomeCategorySort] = useState("largest");
+  const [expenseCategorySort, setExpenseCategorySort] = useState("largest");
+  const [deleteCategoryConfirm, setDeleteCategoryConfirm] = useState(null);
+  const [removingCategory, setRemovingCategory] = useState(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [editingCategoryName, setEditingCategoryName] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -690,7 +1157,10 @@ export default function DashboardPage() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [categoryRulePrompt, setCategoryRulePrompt] = useState(null);
+  const [categoryRuleToast, setCategoryRuleToast] = useState(null);
+  const [openCategoryDropdownKey, setOpenCategoryDropdownKey] = useState(null);
+  const [categoryFeedback, setCategoryFeedback] = useState({});
+  const [noteFeedback, setNoteFeedback] = useState({});
   const [toastMessage, setToastMessage] = useState("");
   const [showCategoryRulesModal, setShowCategoryRulesModal] = useState(false);
   const [savedCategoryRules, setSavedCategoryRules] = useState([]);
@@ -708,7 +1178,8 @@ export default function DashboardPage() {
   const chatEndRef = useRef(null);
   const noteInputRef = useRef(null);
   const noteEditorRef = useRef(null);
-  const quickActionsRef = useRef(null);
+  const actionCardRef = useRef(null);
+  const categoryRuleToastTimerRef = useRef(null);
 
   const bankOptions = formTipe === "cc" ? CC_OPTIONS : BANK_OPTIONS;
 
@@ -756,13 +1227,13 @@ export default function DashboardPage() {
     ]);
 
     const accountList = safeArray(accountListRaw);
-    const rawTransactions = safeArray(rawTransactionsRaw);
     const uploadHistoryList = safeArray(uploadHistoryListRaw);
     const categoryRules = safeArray(categoryRulesRaw);
     const notesRules = safeArray(notesRulesRaw);
 
     setAccounts(accountList);
     setUploadHistory(uploadHistoryList);
+    setSavedCategoryRules(categoryRules);
     setCustomCategories(safeArray(preferences.customCategories));
     setCategoryRenames(
       preferences.categoryRenames && typeof preferences.categoryRenames === "object"
@@ -778,20 +1249,11 @@ export default function DashboardPage() {
     setPermanentlyDismissed(safeArray(preferences.permanentlyDismissed));
 
     let insightsData = safeArray(preferences.aiInsights);
-    if (typeof window !== "undefined") {
-      try {
-        const rawInsights = localStorage.getItem("aiInsights");
-        if (rawInsights) {
-          const parsed = JSON.parse(rawInsights);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            insightsData = parsed;
-            await saveUserPreferences({ aiInsights: parsed });
-            localStorage.removeItem("aiInsights");
-          }
-        }
-      } catch {
-        // ignore invalid insights cache from upload flow
-      }
+
+    const rawTransactions = safeArray(rawTransactionsRaw);
+    if (rawTransactions.length === 0 && insightsData.length > 0) {
+      await saveUserPreferences({ aiInsights: [] });
+      insightsData = [];
     }
     setInsights(insightsData);
 
@@ -922,8 +1384,8 @@ export default function DashboardPage() {
 
     const handleClickOutside = (event) => {
       if (
-        quickActionsRef.current &&
-        !quickActionsRef.current.contains(event.target)
+        actionCardRef.current &&
+        !actionCardRef.current.contains(event.target)
       ) {
         setQuickActionDropdown(null);
       }
@@ -1141,10 +1603,31 @@ export default function DashboardPage() {
   }, [displayCategorySummary, categoryRenames, incomeCategoryNames, customCategories]);
 
   const displayExpenseCategorySummary = useMemo(() => {
-    return displayCategorySummary
-      .filter((item) => !incomeCategoryNames.has(item.kategori))
-      .sort((a, b) => b.totalDebit - a.totalDebit);
-  }, [displayCategorySummary, incomeCategoryNames]);
+    const expenseOrder = EXPENSE_CATEGORY_ORDER.map(
+      (cat) => categoryRenames[cat] || cat,
+    );
+    const map = new Map(
+      displayCategorySummary
+        .filter((item) => !incomeCategoryNames.has(item.kategori))
+        .map((item) => [item.kategori, item]),
+    );
+    expenseOrder.forEach((name) => {
+      if (!map.has(name)) {
+        map.set(name, { kategori: name, totalDebit: 0, count: 0 });
+      }
+    });
+    customCategories.forEach((cat) => {
+      if (cat.type === "expense" && !map.has(cat.name)) {
+        map.set(cat.name, { kategori: cat.name, totalDebit: 0, count: 0 });
+      }
+    });
+    return Array.from(map.values());
+  }, [
+    displayCategorySummary,
+    categoryRenames,
+    incomeCategoryNames,
+    customCategories,
+  ]);
 
   const totalPemasukan = useMemo(
     () =>
@@ -1193,14 +1676,143 @@ export default function DashboardPage() {
     [transactions],
   );
 
-  const filteredTransactions = useMemo(() => {
-    return monthFilteredTransactions
+  const computeCategoryTotalsForMonth = (monthKey) => {
+    const totals = {};
+
+    transactions
+      .map((transaction, originalIndex) => ({ transaction, originalIndex }))
       .filter(({ transaction }) =>
-        activeCategory === "all"
-          ? true
-          : normalizeKategori(transaction?.kategori) === normalizeKategori(activeCategory),
-      );
-  }, [monthFilteredTransactions, activeCategory]);
+        transactionMatchesAccountFilter(transaction, selectedAccountId, accounts),
+      )
+      .filter(({ transaction }) => {
+        if (!monthKey) return true;
+        return filterByBulan([transaction], monthKey).length > 0;
+      })
+      .forEach(({ transaction }) => {
+        if (shouldExcludeFromSpending(transaction)) return;
+
+        const kategori = normalizeKategori(transaction?.kategori);
+        const debit = parseAmount(transaction?.debit);
+        const kredit = parseAmount(transaction?.kredit);
+        const jenis =
+          transaction?.jenis || inferJenisFromAmounts(debit, kredit);
+        const amount = jenis === "income" ? kredit : debit;
+
+        if (!totals[kategori]) {
+          totals[kategori] = { total: 0, count: 0 };
+        }
+        totals[kategori].total += amount;
+        totals[kategori].count += 1;
+      });
+
+    return totals;
+  };
+
+  const enrichCategorySummaryList = (items, isIncome, poolTotal) => {
+    const trendMonthKey = selectedBulan || getCurrentMonthKey();
+    const previousMonthKey = getPreviousMonthKey(trendMonthKey);
+    const previousTotals = previousMonthKey
+      ? computeCategoryTotalsForMonth(previousMonthKey)
+      : {};
+
+    return items.map((item) => {
+      const poolTotalValue = poolTotal;
+      const sharePercent =
+        poolTotalValue > 0 ? (item.totalDebit / poolTotalValue) * 100 : 0;
+      const prevTotal = previousTotals[item.kategori]?.total || 0;
+      let trend = 0;
+      if (prevTotal === 0) {
+        trend = item.totalDebit > 0 ? 100 : 0;
+      } else {
+        trend = ((item.totalDebit - prevTotal) / prevTotal) * 100;
+      }
+
+      const normalized = normalizeKategori(item.kategori);
+      const color = colorMap[normalized] || (isIncome ? "#68D391" : "#94a3b8");
+
+      return {
+        ...item,
+        isIncome,
+        sharePercent,
+        trend,
+        color,
+        isCustom: customCategoryNames.has(item.kategori),
+      };
+    });
+  };
+
+  const incomeCategorySummaryEnriched = useMemo(
+    () => enrichCategorySummaryList(displayIncomeCategorySummary, true, totalPemasukan),
+    [
+      displayIncomeCategorySummary,
+      totalPemasukan,
+      colorMap,
+      customCategoryNames,
+      transactions,
+      selectedAccountId,
+      accounts,
+      selectedBulan,
+    ],
+  );
+
+  const expenseCategorySummaryEnriched = useMemo(
+    () =>
+      enrichCategorySummaryList(
+        displayExpenseCategorySummary,
+        false,
+        totalPengeluaran,
+      ),
+    [
+      displayExpenseCategorySummary,
+      totalPengeluaran,
+      colorMap,
+      customCategoryNames,
+      transactions,
+      selectedAccountId,
+      accounts,
+      selectedBulan,
+    ],
+  );
+
+  const categorySummaryEnriched = useMemo(
+    () => [...incomeCategorySummaryEnriched, ...expenseCategorySummaryEnriched],
+    [incomeCategorySummaryEnriched, expenseCategorySummaryEnriched],
+  );
+
+  const drawerCategoryTransactions = useMemo(() => {
+    if (!categoryDrawerCategory) return [];
+
+    return monthFilteredTransactions
+      .filter(
+        ({ transaction }) =>
+          normalizeKategori(transaction?.kategori) ===
+            normalizeKategori(categoryDrawerCategory) &&
+          !shouldExcludeFromSpending(transaction),
+      )
+      .sort((a, b) => {
+        const dateA = parseTransactionDate(a.transaction?.tanggal);
+        const dateB = parseTransactionDate(b.transaction?.tanggal);
+        return (dateB?.getTime() || 0) - (dateA?.getTime() || 0);
+      });
+  }, [categoryDrawerCategory, monthFilteredTransactions]);
+
+  const drawerCategoryRules = useMemo(() => {
+    if (!categoryDrawerCategory) return [];
+    return savedCategoryRules.filter(
+      (rule) =>
+        normalizeKategori(rule.kategori) ===
+        normalizeKategori(categoryDrawerCategory),
+    );
+  }, [savedCategoryRules, categoryDrawerCategory]);
+
+  const drawerCategorySummary = useMemo(() => {
+    if (!categoryDrawerCategory) return null;
+    return categorySummaryEnriched.find(
+      (item) =>
+        normalizeKategori(item.kategori) ===
+        normalizeKategori(categoryDrawerCategory),
+    );
+  }, [categorySummaryEnriched, categoryDrawerCategory]);
 
   const monthlyStackedCharts = useMemo(() => {
     const gajiName = categoryRenames["Gaji & Pemasukan"] || "Gaji & Pemasukan";
@@ -1321,6 +1933,73 @@ export default function DashboardPage() {
     incomeCategoryNames,
     colorMap,
   ]);
+
+  const computeTotalsForMonth = (monthKey) => {
+    if (!monthKey) return { pemasukan: 0, pengeluaran: 0 };
+
+    let pemasukan = 0;
+    let pengeluaran = 0;
+
+    transactions.forEach((transaction) => {
+      if (!transactionMatchesAccountFilter(transaction, selectedAccountId, accounts)) {
+        return;
+      }
+      if (filterByBulan([transaction], monthKey).length === 0) return;
+      if (shouldExcludeFromSpending(transaction)) return;
+
+      const kategori = normalizeKategori(transaction?.kategori);
+      const debit = parseAmount(transaction?.debit);
+      const kredit = parseAmount(transaction?.kredit);
+
+      if (incomeCategoryNames.has(kategori)) {
+        pemasukan += kredit;
+      } else {
+        pengeluaran += debit;
+      }
+    });
+
+    return { pemasukan, pengeluaran };
+  };
+
+  const metricTrends = useMemo(() => {
+    const currentMonthKey =
+      selectedBulan || availableBulan[availableBulan.length - 1] || null;
+    const previousMonthKey = getPreviousMonthKey(currentMonthKey);
+
+    if (!currentMonthKey || !previousMonthKey) {
+      return { incomeTrend: null, expenseTrend: null };
+    }
+
+    const current = computeTotalsForMonth(currentMonthKey);
+    const previous = computeTotalsForMonth(previousMonthKey);
+
+    const percentChange = (currentValue, previousValue) => {
+      if (previousValue === 0) {
+        if (currentValue === 0) return 0;
+        return 100;
+      }
+      return ((currentValue - previousValue) / previousValue) * 100;
+    };
+
+    return {
+      incomeTrend: percentChange(current.pemasukan, previous.pemasukan),
+      expenseTrend: percentChange(current.pengeluaran, previous.pengeluaran),
+    };
+  }, [
+    transactions,
+    selectedAccountId,
+    accounts,
+    selectedBulan,
+    availableBulan,
+    incomeCategoryNames,
+  ]);
+
+  const savingRate = useMemo(() => {
+    if (totalPemasukan <= 0) return 0;
+    return Math.round(
+      ((totalPemasukan - totalPengeluaran) / totalPemasukan) * 100,
+    );
+  }, [totalPemasukan, totalPengeluaran]);
 
   const chatSummaryData = useMemo(() => {
     let totalPemasukan = 0;
@@ -1568,7 +2247,7 @@ export default function DashboardPage() {
       });
     }
 
-    if (activeCategory === oldName) setActiveCategory(newName);
+    if (categoryDrawerCategory === oldName) setCategoryDrawerCategory(newName);
     closeEditCategoryModal();
   };
 
@@ -1603,28 +2282,63 @@ export default function DashboardPage() {
     setCustomCategories(updated);
     await saveUserPreferences({ customCategories: updated });
     setShowCategoryModal(false);
+    setAddCategoryInlineSection(null);
     setNewCategoryName("");
     setSelectedEmoji("");
     setNewCategoryType("expense");
+    showToast(`✅ Kategori ${name} berhasil ditambahkan`);
   };
 
   const handleDeleteCustomCategory = async (name) => {
-    const inUse = transactions.some(
-      (t) => normalizeKategori(t.kategori) === name,
-    );
-    if (inUse) {
-      alert("Kategori masih digunakan oleh transaksi.");
-      return;
+    const lainnya = normalizeKategori("Lainnya");
+    const indicesToUpdate = transactions
+      .map((transaction, index) => ({ transaction, index }))
+      .filter(
+        ({ transaction }) => normalizeKategori(transaction?.kategori) === name,
+      )
+      .map(({ index }) => index);
+
+    if (indicesToUpdate.length > 0) {
+      const updates = indicesToUpdate.map((index) => ({
+        index,
+        patch: { kategori: lainnya },
+      }));
+      const saved = await persistTransactionsBatch(updates);
+      if (!saved) return;
     }
 
     const updated = customCategories.filter((cat) => cat.name !== name);
     setCustomCategories(updated);
     await saveUserPreferences({ customCategories: updated });
-    if (activeCategory === name) setActiveCategory("all");
+    if (categoryDrawerCategory === name) setCategoryDrawerCategory(null);
+    showToast(`✅ Kategori dihapus, transaksi dipindah ke ${lainnya}`);
+  };
+
+  const handleConfirmDeleteCategory = async (name) => {
+    setDeleteCategoryConfirm(null);
+    setRemovingCategory(name);
+    window.setTimeout(async () => {
+      await handleDeleteCustomCategory(name);
+      setRemovingCategory(null);
+    }, 300);
+  };
+
+  const openInlineAddCategory = (section) => {
+    setNewCategoryType(section);
+    setNewCategoryName("");
+    setSelectedEmoji("");
+    setAddCategoryInlineSection(section);
+  };
+
+  const closeInlineAddCategory = () => {
+    setAddCategoryInlineSection(null);
+    setNewCategoryName("");
+    setSelectedEmoji("");
   };
 
   const closeCategoryModal = () => {
     setShowCategoryModal(false);
+    setAddCategoryInlineSection(null);
     setNewCategoryName("");
     setSelectedEmoji("");
     setNewCategoryType("expense");
@@ -1695,6 +2409,48 @@ export default function DashboardPage() {
       }
       return next;
     });
+  };
+
+  const handleRefreshInsights = async () => {
+    if (isRefreshingInsights || transactions.length === 0) return;
+
+    setIsRefreshingInsights(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        showToast("Sesi login tidak valid. Silakan login ulang.");
+        return;
+      }
+
+      const response = await fetch("/api/generate-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessToken: session.access_token }),
+      });
+
+      if (!response.ok) {
+        const errorResult = await response.json().catch(() => ({}));
+        showToast(errorResult?.error || "Gagal memperbarui AI Insight.");
+        return;
+      }
+
+      const result = await response.json();
+      const newInsights = safeArray(result.insights);
+      setInsights(newInsights);
+
+      if (newInsights.length > 0) {
+        showToast("✨ AI Insight diperbarui");
+      } else {
+        showToast("AI Insight belum tersedia untuk data ini.");
+      }
+    } catch {
+      showToast("Gagal memperbarui AI Insight.");
+    } finally {
+      setIsRefreshingInsights(false);
+    }
   };
 
   const getUploadDeleteCount = (entry) => {
@@ -1921,7 +2677,7 @@ export default function DashboardPage() {
                         Upload Statement {bank} →
                       </Link>
                       {confirmDismissBank === bank ? (
-                        <div className="mt-1 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                        <div className="glass-panel mt-1 w-full rounded-xl px-4 py-3">
                           <p className="text-sm text-[#8B92A5]">
                             Yakin? Suggestion ini tidak akan muncul lagi untuk{" "}
                             {bank}.
@@ -2023,15 +2779,233 @@ export default function DashboardPage() {
     });
   }, []);
 
-  const applyCategoryToIndices = async (indices, category) => {
-    const indexSet = new Set(indices);
-    const updated = transactions.map((item, idx) =>
-      indexSet.has(idx)
-        ? { ...item, kategori: normalizeKategori(category) }
-        : item,
+  const getCategoryColor = (categoryName) => {
+    const normalized = normalizeKategori(categoryName);
+    if (colorMap[normalized]) return colorMap[normalized];
+    if (normalized === "Gaji & Pemasukan") return "#68D391";
+    if (normalized === "Investasi") return "#10b981";
+    return "#94a3b8";
+  };
+
+  const triggerCategorySaveFeedback = (rowKey) => {
+    setCategoryFeedback((prev) => ({ ...prev, [rowKey]: "flash" }));
+    window.setTimeout(() => {
+      setCategoryFeedback((prev) => ({ ...prev, [rowKey]: "check" }));
+      window.setTimeout(() => {
+        setCategoryFeedback((prev) => {
+          const next = { ...prev };
+          delete next[rowKey];
+          return next;
+        });
+      }, 800);
+    }, 400);
+  };
+
+  const dismissCategoryRuleToast = () => {
+    if (categoryRuleToastTimerRef.current) {
+      window.clearTimeout(categoryRuleToastTimerRef.current);
+      categoryRuleToastTimerRef.current = null;
+    }
+    setCategoryRuleToast(null);
+  };
+
+  const showCategoryRuleToast = (payload) => {
+    dismissCategoryRuleToast();
+    setCategoryRuleToast(payload);
+    categoryRuleToastTimerRef.current = window.setTimeout(() => {
+      setCategoryRuleToast(null);
+      categoryRuleToastTimerRef.current = null;
+    }, 5000);
+  };
+
+  useEffect(
+    () => () => {
+      if (categoryRuleToastTimerRef.current) {
+        window.clearTimeout(categoryRuleToastTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const persistTransactionField = async (index, patch, previousSnapshot) => {
+    const transaction = transactions[index];
+    if (!transaction) return false;
+
+    if (!transaction.id) {
+      const updated = transactions.map((item, idx) =>
+        idx === index ? { ...item, ...patch } : item,
+      );
+      setTransactions(updated);
+      const saved = await saveTransactions(updated);
+      if (!saved) {
+        setTransactions((prev) =>
+          prev.map((item, idx) => (idx === index ? previousSnapshot : item)),
+        );
+        showToast("Gagal menyimpan. Perubahan dibatalkan.");
+        return false;
+      }
+      return true;
+    }
+
+    const result = await updateTransaction(transaction.id, patch);
+    if (!result) {
+      setTransactions((prev) =>
+        prev.map((item, idx) => (idx === index ? previousSnapshot : item)),
+      );
+      showToast("Gagal menyimpan. Perubahan dibatalkan.");
+      return false;
+    }
+
+    setTransactions((prev) =>
+      prev.map((item, idx) => (idx === index ? { ...item, ...result } : item)),
     );
-    setTransactions(updated);
-    await saveTransactions(updated);
+    return true;
+  };
+
+  const persistTransactionsBatch = async (updates) => {
+    const snapshots = updates.map(({ index }) => ({
+      index,
+      snapshot: { ...transactions[index] },
+    }));
+
+    setTransactions((prev) =>
+      prev.map((item, idx) => {
+        const update = updates.find((entry) => entry.index === idx);
+        return update ? { ...item, ...update.patch } : item;
+      }),
+    );
+
+    const results = await Promise.all(
+      updates.map(async ({ index, patch }) => {
+        const transaction = transactions[index];
+        if (!transaction?.id) return { index, ok: false };
+        const result = await updateTransaction(transaction.id, patch);
+        return { index, ok: Boolean(result), result };
+      }),
+    );
+
+    const failed = results.filter((entry) => !entry.ok);
+    if (failed.length > 0) {
+      setTransactions((prev) =>
+        prev.map((item, idx) => {
+          const snapshot = snapshots.find((entry) => entry.index === idx);
+          return snapshot ? snapshot.snapshot : item;
+        }),
+      );
+      showToast("Gagal menyimpan beberapa transaksi. Perubahan dibatalkan.");
+      return false;
+    }
+
+    setTransactions((prev) =>
+      prev.map((item, idx) => {
+        const saved = results.find((entry) => entry.index === idx && entry.result);
+        return saved ? { ...item, ...saved.result } : item;
+      }),
+    );
+    return true;
+  };
+
+  const handleCreateCategoryInline = async (name, jenis) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+
+    if (
+      allCategoryOptions.some(
+        (category) => category.toLowerCase() === trimmed.toLowerCase(),
+      )
+    ) {
+      showToast("Kategori sudah ada.");
+      return trimmed;
+    }
+
+    const usedColors = [
+      ...Object.values(DEFAULT_CATEGORY_COLORS),
+      ...customCategories.map((cat) => cat.color),
+    ];
+    const newCategory = {
+      name: trimmed,
+      emoji: "📦",
+      color: pickRandomColor(usedColors),
+      type: jenis === "income" ? "income" : "expense",
+    };
+    const updated = [...customCategories, newCategory];
+    setCustomCategories(updated);
+    await saveUserPreferences({ customCategories: updated });
+    return trimmed;
+  };
+
+  const handleCategorySelect = async (index, nextCategory) => {
+    if (index < 0) return;
+
+    const transaction = transactions[index];
+    const normalizedNext = normalizeKategori(nextCategory);
+    const normalizedPrev = normalizeKategori(transaction?.kategori);
+    if (normalizedNext === normalizedPrev) {
+      setOpenCategoryDropdownKey(null);
+      return;
+    }
+
+    const previousSnapshot = { ...transaction };
+    const rowKey = getTransactionRowKey(transaction, index);
+    const sourceJenis = transaction?.jenis;
+    const otherMatches = getMatchingIndices(transactions, index).filter(
+      (matchIndex) =>
+        matchIndex !== index &&
+        normalizeKategori(transactions[matchIndex]?.kategori) === normalizedPrev &&
+        transactions[matchIndex]?.jenis === sourceJenis,
+    );
+
+    setOpenCategoryDropdownKey(null);
+    setTransactions((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, kategori: normalizedNext } : item,
+      ),
+    );
+    triggerCategorySaveFeedback(rowKey);
+
+    const saved = await persistTransactionField(
+      index,
+      { kategori: normalizedNext },
+      previousSnapshot,
+    );
+    if (!saved) return;
+
+    if (otherMatches.length > 0) {
+      showCategoryRuleToast({
+        rowKey,
+        transactionIndex: index,
+        keyword: extractKeyword(transaction?.deskripsi),
+        newCategory: normalizedNext,
+        matchingIndices: otherMatches,
+      });
+    }
+  };
+
+  const handleSkipCategoryRuleToast = () => {
+    dismissCategoryRuleToast();
+  };
+
+  const handleApplyCategoryRuleToast = async () => {
+    if (!categoryRuleToast) return;
+
+    const { matchingIndices, newCategory, keyword, transactionIndex } =
+      categoryRuleToast;
+    dismissCategoryRuleToast();
+
+    const updates = matchingIndices.map((index) => ({
+      index,
+      patch: { kategori: newCategory },
+    }));
+
+    const saved = await persistTransactionsBatch(updates);
+    if (!saved) return;
+
+    await saveCategoryRule(
+      keyword,
+      newCategory,
+      getNoteForTransaction(transactions[transactionIndex]),
+    );
+    showToast(`✅ ${matchingIndices.length} transaksi diupdate`);
   };
 
   const handleClearMoveMoneyMatch = async (originalIndex) => {
@@ -2042,89 +3016,6 @@ export default function DashboardPage() {
     await persistAllTransactions(updated);
   };
 
-  const handleCategoryChange = (index, nextCategory, previousCategory) => {
-    if (index < 0) return;
-
-    const normalizedNext = normalizeKategori(nextCategory);
-    const normalizedPrev = normalizeKategori(
-      previousCategory || transactions[index]?.kategori,
-    );
-
-    if (normalizedNext === normalizedPrev) return;
-
-    const sourceJenis = transactions[index]?.jenis;
-    const matchingIndices = getMatchingIndices(transactions, index).filter(
-      (i) =>
-        normalizeKategori(transactions[i]?.kategori) === normalizedPrev &&
-        transactions[i]?.jenis === sourceJenis,
-    );
-    const otherMatches = matchingIndices.filter((i) => i !== index);
-
-    if (otherMatches.length === 0) {
-      applyCategoryToIndices([index], normalizedNext);
-      return;
-    }
-
-    const keyword = extractKeyword(transactions[index]?.deskripsi);
-    setCategoryRulePrompt({
-      index,
-      newCategory: normalizedNext,
-      keyword,
-      matchingIndices,
-      selectedIndices: [...matchingIndices],
-    });
-  };
-
-  const handleToggleSelectAll = (checked) => {
-    setCategoryRulePrompt((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        selectedIndices: checked ? [...prev.matchingIndices] : [],
-      };
-    });
-  };
-
-  const handleToggleTransactionSelection = (transactionIndex, checked) => {
-    setCategoryRulePrompt((prev) => {
-      if (!prev) return prev;
-      const selectedIndices = checked
-        ? [...prev.selectedIndices, transactionIndex]
-        : prev.selectedIndices.filter((i) => i !== transactionIndex);
-      return { ...prev, selectedIndices };
-    });
-  };
-
-  const handleApplyCategoryRule = async () => {
-    if (!categoryRulePrompt) return;
-    const { selectedIndices, newCategory, keyword } = categoryRulePrompt;
-    if (selectedIndices.length === 0) return;
-    await applyCategoryToIndices(selectedIndices, newCategory);
-    await saveCategoryRule(
-      keyword,
-      newCategory,
-      getNoteForTransaction(transactions[categoryRulePrompt.index]),
-    );
-    showToast(`✅ ${selectedIndices.length} transaksi berhasil dikategorisasi`);
-    setCategoryRulePrompt(null);
-  };
-
-  const handleApplyThisTransactionOnly = async () => {
-    if (!categoryRulePrompt) return;
-    const { index, newCategory, keyword } = categoryRulePrompt;
-    await applyCategoryToIndices([index], newCategory);
-    await saveCategoryRule(
-      keyword,
-      newCategory,
-      getNoteForTransaction(transactions[index]),
-    );
-    setCategoryRulePrompt(null);
-  };
-
-  const handleCancelCategoryRule = () => {
-    setCategoryRulePrompt(null);
-  };
-
   const getNoteForTransaction = (transaction) => {
     const key = getTransactionNoteKey(transaction);
     return transactionNotes[key] || transaction?.notes || "";
@@ -2133,19 +3024,78 @@ export default function DashboardPage() {
   const hasNoteForTransaction = (transaction) =>
     Boolean(getNoteForTransaction(transaction).trim());
 
+  const triggerNoteSaveFeedback = (rowKey) => {
+    setNoteFeedback((prev) => ({ ...prev, [rowKey]: true }));
+    window.setTimeout(() => {
+      setNoteFeedback((prev) => {
+        const next = { ...prev };
+        delete next[rowKey];
+        return next;
+      });
+    }, 500);
+  };
+
+  const persistSingleNoteUpdate = async (index, noteText) => {
+    const trimmed = String(noteText || "").trim();
+    const transaction = transactions[index];
+    if (!transaction) return false;
+
+    const previousSnapshot = { ...transaction };
+    const previousNotesState = { ...transactionNotes };
+    const key = getTransactionNoteKey(transaction);
+    const previousNoteValue = getNoteForTransaction(transaction);
+
+    const notes = saveTransactionNote(key, trimmed);
+    setTransactionNotes({ ...notes });
+    setTransactions((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, notes: trimmed || undefined } : item,
+      ),
+    );
+
+    const saved = await persistTransactionField(
+      index,
+      { notes: trimmed || null },
+      previousSnapshot,
+    );
+
+    if (!saved) {
+      saveTransactionNote(key, previousNoteValue);
+      setTransactionNotes(previousNotesState);
+      return false;
+    }
+
+    triggerNoteSaveFeedback(getTransactionRowKey(transaction, index));
+    return true;
+  };
+
   const persistNotesToIndices = async (indices, noteText) => {
     const trimmed = String(noteText || "").trim();
-    const indexSet = new Set(indices);
+    const updates = indices.map((index) => ({
+      index,
+      patch: { notes: trimmed || null },
+    }));
+
+    const snapshots = indices.map((index) => ({
+      index,
+      key: getTransactionNoteKey(transactions[index]),
+      previousNote: getNoteForTransaction(transactions[index]),
+      snapshot: { ...transactions[index] },
+    }));
+
     let notes = loadTransactionNotes();
-    const updated = transactions.map((item, idx) => {
-      if (!indexSet.has(idx)) return item;
-      const key = getTransactionNoteKey(item);
+    snapshots.forEach(({ key }) => {
       notes = saveTransactionNote(key, trimmed);
-      return { ...item, notes: trimmed || undefined };
     });
     setTransactionNotes({ ...notes });
-    setTransactions(updated);
-    await saveTransactions(updated);
+
+    const saved = await persistTransactionsBatch(updates);
+    if (!saved) {
+      snapshots.forEach(({ key, previousNote }) => {
+        saveTransactionNote(key, previousNote);
+      });
+      setTransactionNotes({ ...transactionNotes });
+    }
   };
 
   const handleStartNoteEdit = (transaction, originalIndex) => {
@@ -2155,7 +3105,7 @@ export default function DashboardPage() {
     setDraftNote(getNoteForTransaction(transaction));
   };
 
-  const handleSaveNoteEdit = () => {
+  const handleSaveNoteEdit = async () => {
     if (editingNoteKey === null || editingNoteIndex < 0) return;
 
     const trimmed = draftNote.trim();
@@ -2167,7 +3117,7 @@ export default function DashboardPage() {
     setDraftNote("");
 
     if (!trimmed) {
-      persistNotesToIndices([index], "");
+      await persistSingleNoteUpdate(index, "");
       return;
     }
 
@@ -2178,9 +3128,11 @@ export default function DashboardPage() {
     const otherMatches = matchingIndices.filter((i) => i !== index);
 
     if (otherMatches.length === 0) {
-      persistNotesToIndices([index], trimmed);
+      await persistSingleNoteUpdate(index, trimmed);
       return;
     }
+
+    await persistSingleNoteUpdate(index, trimmed);
 
     const keyword = extractKeyword(transaction?.deskripsi);
     setNotesRulePrompt({
@@ -2276,591 +3228,976 @@ export default function DashboardPage() {
     showToast("Aturan notes dihapus");
   };
 
-  const renderCategoryCards = (items, emptyMessage) => {
-    if (items.length === 0) {
-      return (
-        <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] p-4 text-[#8B92A5]">
-          {emptyMessage}
-        </div>
-      );
-    }
+  const renderCategoryRuleToast = (rowKey, compact = false) => {
+    if (categoryRuleToast?.rowKey !== rowKey) return null;
 
-    return items.map((item) => {
-      const isCustom = customCategoryNames.has(item.kategori);
-      const canDelete = isCustom && item.count === 0;
-
-      return (
-        <button
-          key={item.kategori}
-          type="button"
-          onClick={() => setActiveCategory(item.kategori)}
-          className={`group relative rounded-2xl border p-4 text-left transition ${
-            activeCategory === item.kategori
-              ? "vale-pill-active"
-              : "vale-card text-[#ECEEF2] hover:border-[rgba(99,179,237,0.25)] hover:bg-[#1E2129]"
-          }`}
-        >
-          <span
-            role="button"
-            tabIndex={0}
-            onClick={(event) => {
-              event.stopPropagation();
-              openEditCategoryModal(item.kategori);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.stopPropagation();
-                openEditCategoryModal(item.kategori);
-              }
-            }}
-            className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-xs opacity-0 transition-opacity group-hover:opacity-100 ${
-              activeCategory === item.kategori
-                ? "bg-[#1A1D25]/20 hover:bg-[#1A1D25]/30"
-                : "bg-[#20242E] hover:bg-[#1A1D25]/20"
-            }`}
-            aria-label={`Edit kategori ${item.kategori}`}
-          >
-            ✏️
-          </span>
-          {canDelete ? (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(event) => {
-                event.stopPropagation();
-                handleDeleteCustomCategory(item.kategori);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.stopPropagation();
-                  handleDeleteCustomCategory(item.kategori);
-                }
-              }}
-              className={`absolute right-11 top-3 flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold opacity-0 transition-opacity group-hover:opacity-100 ${
-                activeCategory === item.kategori
-                  ? "bg-[#1A1D25]/20 text-white hover:bg-[#1A1D25]/30"
-                  : "bg-[#20242E] text-[#8B92A5] hover:bg-[#1A1D25]/20"
-              }`}
-              aria-label={`Hapus kategori ${item.kategori}`}
-            >
-              ×
-            </span>
-          ) : null}
-          <p
-            className={`text-sm font-medium ${
-              activeCategory === item.kategori ? "text-white/90" : "text-[#8B92A5]"
-            }`}
-          >
-            {emojiMap[item.kategori] || "📦"} {item.kategori}
-          </p>
-          <p
-            className={`mt-1 text-xl font-bold ${
-              activeCategory === item.kategori ? "text-white" : "text-[#63B3ED]"
-            }`}
-          >
-            {formatRupiah(item.totalDebit)}
-          </p>
-          <p
-            className={`mt-1 text-sm ${
-              activeCategory === item.kategori ? "text-white/90" : "text-[#8B92A5]"
-            }`}
-          >
-            {item.count} transaksi
-          </p>
-        </button>
-      );
-    });
-  };
-
-  return (
-    <div className="vale-page font-body relative min-h-screen">
-      <Navbar />
-
-      {isLoading ? <DashboardLoadingSkeleton /> : null}
-
-      {!isLoading && (
-        <div>
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
-          <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-4xl">
-          Dashboard Transaksi
-          {selectedAccount ? (
-            <span className="font-serif-display font-normal text-[#ECEEF2]">
-              {" "}
-              — {selectedAccount.nama}
-            </span>
-          ) : null}
-        </h1>
-
-        <div className="mt-4 flex items-center gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
-            <button
-              type="button"
-              onClick={() => setSelectedAccountId("")}
-              className={`inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold transition ${
-                !selectedAccountId
-                  ? "btn-primary"
-                  : "vale-pill-inactive"
-              }`}
-            >
-              Semua Akun
-            </button>
-
-            {accounts.map((account) => {
-              const isActive = selectedAccountId === account.id;
-              return (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => setSelectedAccountId(account.id)}
-                  className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
-                    isActive ? "vale-pill-active" : "vale-pill-inactive"
-                  }`}
-                >
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: account.warna || "#63B3ED" }}
-                    aria-hidden="true"
-                  />
-                  {account.nama}
-                </button>
-              );
-            })}
-
-            <button
-              type="button"
-              onClick={() => setShowAddAccountModal(true)}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-lg font-semibold text-[#8B92A5] transition hover:border-[#63B3ED] hover:text-[#63B3ED]"
-              aria-label="Tambah akun dan upload statement"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        {showAccountEmptyState ? (
-          <div>
-            <div ref={quickActionsRef} className="mt-4 flex justify-center">
-              <button
-                type="button"
-                onClick={handleUploadStatementAction}
-                className="btn-primary inline-flex items-center gap-2 rounded-[10px] px-6 py-3 text-[15px] font-semibold transition"
-              >
-                📄 Upload Statement →
-              </button>
-            </div>
-
-            {renderSmartSuggestionBanners()}
-
-            <section className="vale-card mt-8 flex flex-col items-center justify-center rounded-2xl px-6 py-16 text-center">
-              <span className="text-5xl" aria-hidden="true">
-                📄
-              </span>
-              <h2 className="mt-6 text-xl font-bold text-[#ECEEF2]">
-                Belum ada statement
-              </h2>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#8B92A5]">
-                Upload statement {selectedAccount?.bank || "bank"} kamu untuk mulai
-                analisa keuangan
-              </p>
-            </section>
-          </div>
-        ) : (
-          <div>
-        <div ref={quickActionsRef} className="mt-4 flex flex-wrap gap-2">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={handleUploadStatementAction}
-              className={QUICK_ACTION_BUTTON_CLASS}
-            >
-              📄 Upload Statement
-            </button>
-            {quickActionDropdown === "upload" ? (
-              <div className="absolute left-0 top-full z-30 mt-2 min-w-[220px] overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] py-1 shadow-xl">
-                {accounts.map((account) => (
-                  <button
-                    key={account.id}
-                    type="button"
-                    onClick={() => handleSelectUploadAccount(account.id)}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#ECEEF2] transition hover:bg-[rgba(99,179,237,0.08)]"
-                  >
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: account.warna || "#63B3ED" }}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{account.nama}</span>
-                      <span className="block truncate text-xs text-[#8B92A5]">
-                        {account.bank}
-                      </span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
+    return (
+      <div className="glass-panel mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2.5">
+        <p className="text-xs text-[#ECEEF2] sm:text-sm">
+          {compact ? (
+            <>
+              Terapkan ke semua &apos;{categoryRuleToast.keyword}&apos;?
+            </>
+          ) : (
+            <>
+              Terapkan &apos;{categoryRuleToast.newCategory}&apos; ke semua
+              transaksi &apos;{categoryRuleToast.keyword}&apos; lainnya?
+            </>
+          )}
+        </p>
+        <div className="flex shrink-0 gap-2">
           <button
             type="button"
-            onClick={openCreateAccountModal}
-            className={QUICK_ACTION_BUTTON_CLASS}
+            onClick={() => void handleApplyCategoryRuleToast()}
+            className="rounded-full bg-[#63B3ED] px-3 py-1 text-xs font-semibold text-[#111318] transition hover:bg-[#90CDF4]"
           >
-            🏦 Tambah Akun
+            Ya
           </button>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() =>
-                setQuickActionDropdown((prev) =>
-                  prev === "delete" ? null : "delete",
-                )
-              }
-              className={QUICK_ACTION_BUTTON_CLASS}
-            >
-              🗑️ Hapus Statement
-            </button>
-            {quickActionDropdown === "delete" ? (
-              <div className="absolute left-0 top-full z-30 mt-2 max-h-72 min-w-[280px] overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] py-1 shadow-xl">
-                {uploadHistory.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-[#8B92A5]">
-                    Belum ada statement diupload
-                  </p>
-                ) : (
-                  uploadHistory.map((entry) => {
-                    const account = accountLookup.get(entry.accountId);
-                    return (
-                      <button
-                        key={entry.id}
-                        type="button"
-                        onClick={() => handleDeleteUploadClick(entry)}
-                        className="flex w-full flex-col px-4 py-2.5 text-left transition hover:bg-[rgba(99,179,237,0.08)]"
-                      >
-                        <span className="truncate text-sm font-semibold text-[#ECEEF2]">
-                          {entry.fileName}
-                        </span>
-                        <span className="mt-0.5 text-xs text-[#8B92A5]">
-                          {entry.dateRange} · {entry.transactionCount} transaksi
-                          {account ? ` · ${account.nama}` : ""}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          <Link href="/accounts" className={QUICK_ACTION_BUTTON_CLASS}>
-            ⚙️ Kelola Akun
-          </Link>
-        </div>
-
-        {renderSmartSuggestionBanners()}
-
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <p className="text-sm font-semibold text-[#63B3ED]">Filter Bulan:</p>
-          <select
-            value={selectedBulan}
-            onChange={(event) => setSelectedBulan(event.target.value)}
-            className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2 text-sm font-semibold text-[#ECEEF2] outline-none transition focus:border-[#63B3ED]"
+          <button
+            type="button"
+            onClick={handleSkipCategoryRuleToast}
+            className="rounded-full border border-[rgba(255,255,255,0.08)] px-3 py-1 text-xs font-semibold text-[#8B92A5] transition hover:bg-[rgba(255,255,255,0.04)]"
           >
-            <option value="">Semua Bulan</option>
-            {availableBulan.map((bulan) => (
-              <option key={bulan} value={bulan}>
-                {formatBulanLabel(bulan)}
-              </option>
-            ))}
-          </select>
+            Skip
+          </button>
         </div>
+      </div>
+    );
+  };
 
-        {insights.length > 0 && !selectedAccountId ? (
-          <section className="vale-card mt-8 overflow-hidden rounded-2xl">
-            <button
-              type="button"
-              onClick={toggleAiInsight}
-              className="flex w-full items-center justify-between gap-3 p-5 text-left transition hover:bg-[rgba(255,255,255,0.02)]"
-              aria-expanded={aiInsightExpanded}
-            >
-              <h2 className="text-xl font-bold text-[#63B3ED]">✨ AI Insight</h2>
-              <span
-                className={`shrink-0 text-sm text-[#8B92A5] transition-transform duration-300 ${
-                  aiInsightExpanded ? "rotate-180" : ""
-                }`}
-                aria-hidden="true"
-              >
-                ▼
-              </span>
-            </button>
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                aiInsightExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              <div className="overflow-hidden">
-                <div className="border-t border-[rgba(255,255,255,0.06)] px-5 pb-5 pt-4">
-                  <p className="text-sm text-[#8B92A5]">
-                    Analisa personal berdasarkan pola spending kamu
-                  </p>
-                  <ul className="mt-4 space-y-3">
-                    {insights.map((insight, index) => (
-                      <li
-                        key={`insight-${index}`}
-                        className={`${INSIGHT_VARIANTS[index % INSIGHT_VARIANTS.length]} px-4 py-3 text-sm leading-relaxed text-[#8B92A5]`}
-                      >
-                        <span className="mr-2 font-bold text-[#63B3ED]">
-                          {index + 1}.
-                        </span>
-                        {insight}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+  const renderDrawerTransactionList = () =>
+    drawerCategoryTransactions.map(({ transaction, originalIndex }, index) => {
+      const rowKey = getTransactionRowKey(transaction, originalIndex);
+      const noteKey = getTransactionNoteKey(transaction);
+      const savedNote = getNoteForTransaction(transaction);
+      const isEditingNote = editingNoteKey === noteKey;
+      const account = resolveAccountForTransaction(
+        transaction,
+        accountLookup,
+        accounts,
+      );
+      const amountDisplay = formatAmount(transaction);
+      const isMoveMoney = transaction?.matchType === "move_money";
+      const categoryOptions =
+        transaction?.jenis === "income"
+          ? incomeCategoryOptions
+          : expenseCategoryOptions;
+      const accountColor = account?.warna || DEFAULT_ACCOUNT_COLOR;
+
+      return (
+        <div
+          key={`drawer-${rowKey}-${index}`}
+          className="border-b border-[rgba(255,255,255,0.06)] py-4 last:border-b-0"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-[#8B92A5]">
+                {transaction?.tanggal || "-"}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold text-[#ECEEF2]">
+                {transaction?.deskripsi || "-"}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {account ? (
+                  <span
+                    className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      backgroundColor: hexToRgba(accountColor, 0.12),
+                      border: `1px solid ${hexToRgba(accountColor, 0.3)}`,
+                      color: accountColor,
+                    }}
+                  >
+                    {getAccountShortLabel(account)}
+                  </span>
+                ) : null}
+                <CategoryInlineEditor
+                  transaction={transaction}
+                  categoryOptions={categoryOptions}
+                  emojiMap={emojiMap}
+                  getCategoryColor={getCategoryColor}
+                  isOpen={openCategoryDropdownKey === rowKey}
+                  onToggle={() =>
+                    setOpenCategoryDropdownKey((prev) =>
+                      prev === rowKey ? null : rowKey,
+                    )
+                  }
+                  onClose={() => setOpenCategoryDropdownKey(null)}
+                  onSelectCategory={(category) =>
+                    void handleCategorySelect(originalIndex, category)
+                  }
+                  onCreateCategory={async (name) => {
+                    const created = await handleCreateCategoryInline(
+                      name,
+                      transaction?.jenis,
+                    );
+                    if (created) {
+                      await handleCategorySelect(originalIndex, created);
+                    }
+                  }}
+                  feedbackState={categoryFeedback[rowKey]}
+                  isMoveMoney={isMoveMoney}
+                  onClearMoveMoney={() =>
+                    void handleClearMoveMoneyMatch(originalIndex)
+                  }
+                />
               </div>
             </div>
-          </section>
+            <span className={`shrink-0 text-sm ${amountDisplay.className}`}>
+              {amountDisplay.text}
+            </span>
+          </div>
+          <div
+            ref={isEditingNote ? noteEditorRef : null}
+            className="mt-3 w-full"
+          >
+            <DrawerTransactionNotesBar
+              note={savedNote}
+              isEditing={isEditingNote}
+              draftNote={draftNote}
+              onDraftChange={setDraftNote}
+              onStartEdit={() =>
+                handleStartNoteEdit(transaction, originalIndex)
+              }
+              onSave={() => void handleSaveNoteEdit()}
+              onCancel={handleCancelNoteEdit}
+              inputRef={noteInputRef}
+              showSaveFlash={Boolean(noteFeedback[rowKey])}
+            />
+          </div>
+          {renderCategoryRuleToast(rowKey, true)}
+        </div>
+      );
+    });
+
+  const renderCategorySortSelect = (value, onChange) => (
+    <select
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-3 py-1.5 text-xs font-semibold text-[#8B92A5] outline-none transition focus:border-[#63B3ED]"
+      aria-label="Urutkan kategori"
+    >
+      <option value="largest">Urutkan: Terbesar ↓</option>
+      <option value="smallest">Urutkan: Terkecil ↑</option>
+      <option value="az">Urutkan: A-Z</option>
+    </select>
+  );
+
+  const renderAddCategoryCard = (section) => (
+    <button
+      type="button"
+      onClick={() => openInlineAddCategory(section)}
+      className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-[rgba(255,255,255,0.15)] bg-transparent p-5 text-center transition hover:border-[#63B3ED] hover:bg-[rgba(99,179,237,0.04)]"
+    >
+      <span className="text-3xl font-light text-[#63B3ED]" aria-hidden="true">
+        +
+      </span>
+      <span className="mt-2 text-sm font-semibold text-[#8B92A5]">
+        Tambah Kategori
+      </span>
+    </button>
+  );
+
+  const renderInlineAddCategoryModal = () => {
+    if (!addCategoryInlineSection) return null;
+
+    const isIncome = addCategoryInlineSection === "income";
+
+    return (
+      <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/50 px-4">
+        <div className="vale-modal w-full max-w-md rounded-2xl p-6 shadow-xl">
+          <h3 className="text-xl font-bold text-[#63B3ED]">Tambah Kategori</h3>
+          <p className="mt-1 text-sm text-[#8B92A5]">
+            Kategori {isIncome ? "pemasukan" : "pengeluaran"} baru
+          </p>
+
+          <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
+            Nama Kategori
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(event) => setNewCategoryName(event.target.value)}
+              placeholder="Contoh: Pendidikan Anak"
+              className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
+            />
+          </label>
+
+          <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Jenis Kategori</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setNewCategoryType("income")}
+              className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                newCategoryType === "income"
+                  ? "btn-primary"
+                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
+              }`}
+            >
+              💰 Income
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewCategoryType("expense")}
+              className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                newCategoryType === "expense"
+                  ? "btn-primary"
+                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
+              }`}
+            >
+              💸 Expense
+            </button>
+          </div>
+
+          <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Pilih Emoji</p>
+          <div className="mt-2 grid grid-cols-5 gap-2 sm:grid-cols-10">
+            {EMOJI_OPTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setSelectedEmoji(emoji)}
+                className={`rounded-xl border p-2 text-xl transition ${
+                  selectedEmoji === emoji
+                    ? "border-[#63B3ED] bg-[#63B3ED]/10"
+                    : "border-[rgba(255,255,255,0.08)] hover:border-[#63B3ED]/40"
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCreateCategory()}
+              className="btn-primary flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition"
+            >
+              Simpan
+            </button>
+            <button
+              type="button"
+              onClick={closeInlineAddCategory}
+              className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCategorySummaryCard = (item) => {
+    const borderColor = item.isIncome ? "#68D391" : item.color;
+    const trendPositive = item.trend >= 0;
+    const isEmpty = item.count === 0;
+    const isRemoving = removingCategory === item.kategori;
+    const isConfirmingDelete = deleteCategoryConfirm === item.kategori;
+
+    return (
+      <article
+        key={item.kategori}
+        role="button"
+        tabIndex={isConfirmingDelete ? -1 : 0}
+        onClick={() => {
+          if (isConfirmingDelete || isRemoving) return;
+          setCategoryDrawerCategory(item.kategori);
+        }}
+        onKeyDown={(event) => {
+          if (isConfirmingDelete || isRemoving) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setCategoryDrawerCategory(item.kategori);
+          }
+        }}
+        className={`category-summary-card glass-card relative rounded-2xl p-5 ${
+          isEmpty ? "category-summary-card--empty" : ""
+        } ${isRemoving ? "category-card-exit" : ""}`}
+        style={{ borderLeft: `3px solid ${borderColor}` }}
+      >
+        {item.isCustom ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDeleteCategoryConfirm(item.kategori);
+            }}
+            className="absolute right-3 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-[rgba(255,255,255,0.06)] text-xs text-[#8B92A5] opacity-0 transition hover:bg-[rgba(252,129,129,0.15)] hover:text-[#FC8181] group-hover/card:opacity-100 focus:opacity-100"
+            aria-label={`Hapus kategori ${item.kategori}`}
+          >
+            ×
+          </button>
         ) : null}
 
-        <section className="vale-card mt-8 rounded-2xl p-5">
-          <h2 className="text-xl font-bold text-[#63B3ED]">
-            Ringkasan Keuangan per Bulan
-          </h2>
-          <div className="mt-4 flex flex-col gap-8 lg:flex-row">
-            <MonthlyStackedBarChart
-              title="Pemasukan"
-              data={monthlyStackedCharts.pemasukanChartData}
-              stackKeys={monthlyStackedCharts.pemasukanKeys}
-              getColor={monthlyStackedCharts.getIncomeColor}
-              selectedBulan={selectedBulan}
-            />
-            <MonthlyStackedBarChart
-              title="Pengeluaran"
-              data={monthlyStackedCharts.pengeluaranChartData}
-              stackKeys={monthlyStackedCharts.pengeluaranKeys}
-              getColor={monthlyStackedCharts.getExpenseColor}
-              selectedBulan={selectedBulan}
-            />
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => setShowCategoryModal(true)}
-              className="rounded-full border border-[rgba(99,179,237,0.3)] px-4 py-2 text-sm font-semibold text-[#63B3ED] transition btn-primary"
-            >
-              + Tambah Kategori
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveCategory("all")}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                activeCategory === "all"
-                  ? "btn-primary"
-                  : "border border-[rgba(99,179,237,0.3)] text-[#63B3ED] btn-primary"
-              }`}
-            >
-              Semua Transaksi
-            </button>
-          </div>
-
-          <div className="mt-8">
-            {moveMoneySummary.pairCount > 0 ? (
-              <div
-                className="mb-6 rounded-xl border px-4 py-3"
-                style={{
-                  background: "rgba(139,146,165,0.1)",
-                  borderColor: "rgba(139,146,165,0.2)",
-                }}
-              >
-                <p className="text-sm font-semibold text-[#8B92A5]">
-                  ↔️ Move Money: {formatRupiah(moveMoneySummary.total)}
-                </p>
-                <p className="mt-1 text-xs text-[#8B92A5]">
-                  {moveMoneySummary.count} transaksi antar rekening sendiri tidak
-                  dihitung sebagai pengeluaran
-                </p>
-              </div>
-            ) : null}
-
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-extrabold text-[#68D391]">💰 Pemasukan</h2>
-              <p className="text-xl font-bold text-[#68D391]">
-                {formatRupiah(totalPemasukan)}
-              </p>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {renderCategoryCards(
-                displayIncomeCategorySummary,
-                "Belum ada data pemasukan untuk ditampilkan.",
-              )}
-            </div>
-          </div>
-
-          <div className="mt-10 border-t border-[rgba(255,255,255,0.08)] pt-10">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-extrabold text-[#FC8181]">💸 Pengeluaran</h2>
-              <p className="text-xl font-bold text-[#FC8181]">
-                {formatRupiah(totalPengeluaran)}
-              </p>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {renderCategoryCards(
-                displayExpenseCategorySummary,
-                "Belum ada data pengeluaran untuk ditampilkan.",
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-8 vale-card overflow-hidden rounded-2xl">
-          {legacyTransactionCount > 0 ? (
-            <div className="flex justify-end border-b border-[rgba(255,255,255,0.08)] bg-[#20242E] px-4 py-3">
+        {isConfirmingDelete ? (
+          <div
+            className="absolute inset-0 z-10 flex flex-col justify-center rounded-2xl bg-[rgba(13,17,23,0.95)] p-4 backdrop-blur-sm"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <p className="text-sm text-[#ECEEF2]">
+              Hapus kategori ini? Transaksi yang ada akan dipindah ke
+              &apos;Lainnya&apos;
+            </p>
+            <div className="mt-3 flex gap-2">
               <button
                 type="button"
-                onClick={openAssignAccountModal}
-                className="rounded-full border border-[rgba(99,179,237,0.3)] px-4 py-2 text-sm font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.06)]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleConfirmDeleteCategory(item.kategori);
+                }}
+                className="rounded-full bg-[#FC8181] px-3 py-1.5 text-xs font-semibold text-[#111318] transition hover:bg-[#FEB2B2]"
               >
-                ⚙️ Assign Akun ke Transaksi Lama
+                Hapus
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDeleteCategoryConfirm(null);
+                }}
+                className="rounded-full border border-[rgba(255,255,255,0.08)] px-3 py-1.5 text-xs font-semibold text-[#8B92A5] transition hover:bg-[rgba(255,255,255,0.04)]"
+              >
+                Batal
               </button>
             </div>
-          ) : null}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[rgba(255,255,255,0.04)] bg-[#1A1D25]">
-              <thead className="vale-table-header text-left text-sm">
-                <tr>
-                  <th className="px-4 py-3">Tanggal</th>
-                  <th className="px-4 py-3">Akun</th>
-                  <th className="px-4 py-3">Deskripsi</th>
-                  <th className="px-4 py-3">Amount</th>
-                  <th className="px-4 py-3">Kategori</th>
-                  <th className="px-4 py-3">Notes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[rgba(255,255,255,0.04)] bg-[#1A1D25] text-sm">
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map(({ transaction, originalIndex }, index) => {
-                    const noteKey = getTransactionNoteKey(transaction);
-                    const savedNote = getNoteForTransaction(transaction);
-                    const isEditingNote = editingNoteKey === noteKey;
-                    const account = resolveAccountForTransaction(
-                      transaction,
-                      accountLookup,
-                      accounts,
-                    );
-                    const amountDisplay = formatAmount(transaction);
-                    const isMoveMoney = transaction?.matchType === "move_money";
+          </div>
+        ) : null}
 
-                    return (
-                    <tr
-                      key={`${transaction?.tanggal || "trx"}-${originalIndex}-${index}`}
-                      className="group transition-colors hover:bg-[rgba(255,255,255,0.02)]"
+        <p className="text-sm font-semibold text-[#ECEEF2]">
+          {emojiMap[item.kategori] || "📦"} {item.kategori}
+        </p>
+        <p className="mt-3 text-2xl font-bold text-[#ECEEF2]">
+          {item.totalDebit > 0 ? `Rp ${formatRupiah(item.totalDebit)}` : "-"}
+        </p>
+        <p className="mt-1 text-sm text-[#8B92A5]">{item.count} transaksi</p>
+        <div className="mt-4">
+          <div className="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.06)]">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${Math.min(item.sharePercent, 100)}%`,
+                backgroundColor: borderColor,
+              }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-[#8B92A5]">
+            {item.sharePercent.toFixed(1)}% dari total{" "}
+            {item.isIncome ? "pemasukan" : "pengeluaran"}
+          </p>
+        </div>
+        <p
+          className={`mt-2 text-xs font-semibold ${
+            trendPositive ? "text-[#68D391]" : "text-[#FC8181]"
+          }`}
+        >
+          {formatTrendPercent(item.trend)} vs bulan lalu
+        </p>
+        <span
+          className="category-summary-card-hint pointer-events-none absolute bottom-4 right-4 text-sm font-semibold text-[#63B3ED]"
+          aria-hidden="true"
+        >
+          →
+        </span>
+      </article>
+    );
+  };
+
+  const renderCategorySummarySection = (
+    sectionKey,
+    title,
+    totalAmount,
+    totalColor,
+    items,
+    sortMode,
+    onSortChange,
+  ) => {
+    const sortedItems = sortCategorySummaryItems(items, sortMode);
+
+    return (
+      <section>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-[#ECEEF2]">{title}</h3>
+            <p className="mt-1 text-2xl font-bold" style={{ color: totalColor }}>
+              {totalAmount > 0 ? `Rp ${formatRupiah(totalAmount)}` : "-"}
+            </p>
+          </div>
+          {renderCategorySortSelect(sortMode, onSortChange)}
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {sortedItems.map((item) => (
+            <div key={item.kategori} className="group/card">
+              {renderCategorySummaryCard(item)}
+            </div>
+          ))}
+          {renderAddCategoryCard(sectionKey)}
+        </div>
+      </section>
+    );
+  };
+
+  const renderCategorySummarySections = () => (
+    <>
+      {renderCategorySummarySection(
+        "income",
+        "💰 Pemasukan",
+        totalPemasukan,
+        "#68D391",
+        incomeCategorySummaryEnriched,
+        incomeCategorySort,
+        setIncomeCategorySort,
+      )}
+
+      <div className="my-8 border-t border-[rgba(255,255,255,0.08)]" />
+
+      {renderCategorySummarySection(
+        "expense",
+        "💸 Pengeluaran",
+        totalPengeluaran,
+        "#FC8181",
+        expenseCategorySummaryEnriched,
+        expenseCategorySort,
+        setExpenseCategorySort,
+      )}
+
+      {renderInlineAddCategoryModal()}
+    </>
+  );
+
+  const renderCategoryDrawer = () => {
+    if (!categoryDrawerCategory) return null;
+
+    const summary =
+      drawerCategorySummary ||
+      categorySummaryEnriched.find(
+        (item) =>
+          normalizeKategori(item.kategori) ===
+          normalizeKategori(categoryDrawerCategory),
+      );
+    const isIncome = incomeCategoryNames.has(
+      normalizeKategori(categoryDrawerCategory),
+    );
+    const accentColor = summary?.color || (isIncome ? "#68D391" : "#63B3ED");
+
+    return (
+      <>
+        <button
+          type="button"
+          aria-label="Tutup panel kategori"
+          onClick={() => setCategoryDrawerCategory(null)}
+          className="fixed inset-0 z-[55] bg-black/40"
+        />
+        <aside
+          className="category-drawer-panel fixed inset-y-0 right-0 z-[60] flex w-full max-w-[480px] flex-col border-l border-[rgba(255,255,255,0.1)] bg-[#0D1117] shadow-[-8px_0_32px_rgba(0,0,0,0.5)]"
+          aria-label={`Detail kategori ${categoryDrawerCategory}`}
+        >
+          <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-[#ECEEF2]">
+                  {emojiMap[categoryDrawerCategory] || "📦"}{" "}
+                  {categoryDrawerCategory}
+                </h3>
+                <p className="mt-1 text-xl font-bold text-[#63B3ED]">
+                  {summary?.totalDebit > 0
+                    ? `Rp ${formatRupiah(summary.totalDebit)}`
+                    : "-"}
+                </p>
+                <p className="mt-0.5 text-sm text-[#8B92A5]">
+                  {summary?.count || drawerCategoryTransactions.length} transaksi
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCategoryDrawerCategory(null)}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-lg text-[#8B92A5] transition hover:bg-[rgba(255,255,255,0.04)] hover:text-[#ECEEF2]"
+                aria-label="Tutup"
+              >
+                ×
+              </button>
+            </div>
+            <div
+              className="mt-3 h-1 rounded-full"
+              style={{ backgroundColor: hexToRgba(accentColor, 0.35) }}
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
+            {drawerCategoryTransactions.length > 0 ? (
+              renderDrawerTransactionList()
+            ) : (
+              <p className="py-8 text-center text-sm text-[#8B92A5]">
+                Tidak ada transaksi dalam kategori ini untuk periode yang dipilih.
+              </p>
+            )}
+          </div>
+
+          <div className="border-t border-[rgba(255,255,255,0.08)] px-5 py-4">
+            <p className="text-sm font-semibold text-[#ECEEF2]">
+              Aturan Otomatis untuk kategori ini:
+            </p>
+            {drawerCategoryRules.length > 0 ? (
+              <ul className="mt-3 space-y-2">
+                {drawerCategoryRules.map((rule) => (
+                  <li
+                    key={rule.id || rule.keyword}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[#ECEEF2]">
+                        &quot;{rule.keyword}&quot;
+                      </p>
+                      <p className="text-xs text-[#8B92A5]">
+                        → {rule.kategori}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleDeleteCategoryRule(rule.keyword)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm text-[#8B92A5] transition hover:bg-[rgba(252,129,129,0.12)] hover:text-[#FC8181]"
+                      aria-label={`Hapus aturan ${rule.keyword}`}
                     >
-                      <td className="px-4 py-3 text-[#8B92A5]">
-                        {transaction?.tanggal || "-"}
-                      </td>
-                      <td className="px-4 py-3 text-[#8B92A5]">
-                        {account ? (
-                          <span className="vale-account-badge inline-flex items-center">
-                            {getAccountShortLabel(account)}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-[#8B92A5]">
-                        {transaction?.deskripsi || "-"}
-                      </td>
-                      <td className={`px-4 py-3 ${amountDisplay.className}`}>
-                        {amountDisplay.text}
-                      </td>
-                      <td className="px-4 py-3 text-[#8B92A5]">
-                        {isMoveMoney ? (
-                          <div className="flex flex-col items-start gap-1.5">
-                            <span
-                              className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-[#8B92A5]"
-                              style={{
-                                background: "rgba(139,146,165,0.1)",
-                                border: "1px solid rgba(139,146,165,0.2)",
-                              }}
-                            >
-                              ↔️ Move Money
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleClearMoveMoneyMatch(originalIndex)
-                              }
-                              className="text-[11px] font-medium text-[#8B92A5] underline-offset-2 transition hover:text-[#ECEEF2] hover:underline"
-                            >
-                              Bukan move money?
-                            </button>
-                          </div>
-                        ) : (
-                          <select
-                            value={normalizeKategori(transaction?.kategori)}
-                            onChange={(event) =>
-                              handleCategoryChange(
-                                originalIndex,
-                                event.target.value,
-                                transaction?.kategori,
-                              )
-                            }
-                            className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-[#8B92A5]">
+                Belum ada aturan otomatis untuk kategori ini.
+              </p>
+            )}
+          </div>
+        </aside>
+      </>
+    );
+  };
+
+  const renderAccountFilterPills = () => (
+    <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-1">
+      <button
+        type="button"
+        onClick={() => setSelectedAccountId("")}
+        className="inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold transition"
+        style={
+          !selectedAccountId
+            ? {
+                backgroundColor: DEFAULT_ACCOUNT_COLOR,
+                borderColor: DEFAULT_ACCOUNT_COLOR,
+                color: "#111318",
+              }
+            : {
+                backgroundColor: "transparent",
+                borderColor: "rgba(255,255,255,0.15)",
+                color: "#8B92A5",
+              }
+        }
+      >
+        Semua Akun
+      </button>
+      {accounts.map((account) => {
+        const isActive = selectedAccountId === account.id;
+        const accountColor = account.warna || DEFAULT_ACCOUNT_COLOR;
+        return (
+          <button
+            key={account.id}
+            type="button"
+            onClick={() => setSelectedAccountId(account.id)}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition"
+            style={
+              isActive
+                ? {
+                    backgroundColor: accountColor,
+                    borderColor: accountColor,
+                    color: "#111318",
+                  }
+                : {
+                    backgroundColor: "transparent",
+                    borderColor: accountColor,
+                    color: "#ECEEF2",
+                  }
+            }
+          >
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{
+                backgroundColor: isActive ? "rgba(255,255,255,0.95)" : accountColor,
+              }}
+              aria-hidden="true"
+            />
+            {account.nama}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        onClick={openCreateAccountModal}
+        className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-dashed border-[rgba(255,255,255,0.15)] px-3 text-sm font-semibold text-[#8B92A5] transition hover:border-[#63B3ED] hover:text-[#63B3ED]"
+        aria-label="Tambah akun baru"
+      >
+        <span className="text-base leading-none">+</span>
+        Tambah
+      </button>
+    </div>
+  );
+
+  const renderActionCard = () => (
+    <div
+      ref={actionCardRef}
+      className="glass-card mt-6 flex overflow-visible rounded-2xl px-6 py-4"
+    >
+      <div className="relative flex flex-1">
+        <button
+          type="button"
+          onClick={handleUploadStatementAction}
+          className={ACTION_CARD_ITEM_CLASS}
+        >
+          <span className="text-2xl leading-none" aria-hidden="true">
+            📄
+          </span>
+          <span className="mt-2 text-sm font-bold text-[#ECEEF2]">
+            Upload Statement
+          </span>
+          <span className="mt-1 text-xs text-[#8B92A5]">Tambah data baru</span>
+        </button>
+        {quickActionDropdown === "upload" ? (
+          <div className="glass-panel absolute left-1/2 top-full z-30 mt-2 min-w-[220px] -translate-x-1/2 overflow-hidden rounded-xl py-1 shadow-xl">
+            {accounts.map((account) => (
+              <button
+                key={account.id}
+                type="button"
+                onClick={() => handleSelectUploadAccount(account.id)}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#ECEEF2] transition hover:bg-[rgba(99,179,237,0.08)]"
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: account.warna || DEFAULT_ACCOUNT_COLOR }}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">{account.nama}</span>
+                  <span className="block truncate text-xs text-[#8B92A5]">
+                    {account.bank}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        className="mx-2 w-px shrink-0 self-stretch bg-[rgba(255,255,255,0.06)]"
+        aria-hidden="true"
+      />
+
+      <div className="relative flex flex-1">
+        <button
+          type="button"
+          onClick={() =>
+            setQuickActionDropdown((prev) => (prev === "delete" ? null : "delete"))
+          }
+          className={ACTION_CARD_ITEM_CLASS}
+        >
+          <span className="text-2xl leading-none" aria-hidden="true">
+            🗑️
+          </span>
+          <span className="mt-2 text-sm font-bold text-[#ECEEF2]">
+            Hapus Statement
+          </span>
+          <span className="mt-1 text-xs text-[#8B92A5]">Kelola data</span>
+        </button>
+        {quickActionDropdown === "delete" ? (
+          <div className="glass-panel absolute left-1/2 top-full z-30 mt-2 max-h-72 min-w-[280px] -translate-x-1/2 overflow-y-auto rounded-xl py-1 shadow-xl">
+            {uploadHistory.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-[#8B92A5]">
+                Belum ada statement diupload
+              </p>
+            ) : (
+              uploadHistory.map((entry) => {
+                const account = accountLookup.get(entry.accountId);
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => {
+                      setQuickActionDropdown(null);
+                      handleDeleteUploadClick(entry);
+                    }}
+                    className="flex w-full flex-col px-4 py-2.5 text-left transition hover:bg-[rgba(99,179,237,0.08)]"
+                  >
+                    <span className="truncate text-sm font-semibold text-[#ECEEF2]">
+                      {entry.fileName}
+                    </span>
+                    <span className="mt-0.5 text-xs text-[#8B92A5]">
+                      {entry.dateRange} · {entry.transactionCount} transaksi
+                      {account ? ` · ${account.nama}` : ""}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        className="mx-2 w-px shrink-0 self-stretch bg-[rgba(255,255,255,0.06)]"
+        aria-hidden="true"
+      />
+
+      <div className="relative flex flex-1">
+        <button
+          type="button"
+          onClick={openCreateAccountModal}
+          className={ACTION_CARD_ITEM_CLASS}
+        >
+          <span className="text-2xl leading-none" aria-hidden="true">
+            🏦
+          </span>
+          <span className="mt-2 text-sm font-bold text-[#ECEEF2]">Tambah Akun</span>
+          <span className="mt-1 text-xs text-[#8B92A5]">Bank atau kartu kredit</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  useEffect(() => {
+    if (isLoading || searchParams.get("openRules") !== "1") return;
+    void openCategoryRulesModal();
+    router.replace("/dashboard");
+  }, [isLoading, searchParams, router]);
+
+  return (
+    <>
+      {isLoading ? (
+        <DashboardLoadingSkeleton />
+      ) : (
+        <>
+          <main className="flex-1 overflow-y-auto bg-transparent p-6 lg:p-8">
+              <div>
+                <h1 className="font-serif-display text-2xl font-bold tracking-tight text-[#ECEEF2] md:text-3xl">
+                  Dashboard Transaksi
+                </h1>
+                <div className="mt-3">{renderAccountFilterPills()}</div>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-semibold text-[#8B92A5]">
+                    Filter Bulan:
+                  </span>
+                  <select
+                    value={selectedBulan}
+                    onChange={(event) => setSelectedBulan(event.target.value)}
+                    className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2 text-sm font-semibold text-[#ECEEF2] outline-none transition focus:border-[#63B3ED]"
+                  >
+                    <option value="">Semua Bulan</option>
+                    {availableBulan.map((bulan) => (
+                      <option key={bulan} value={bulan}>
+                        {formatBulanLabel(bulan)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {renderActionCard()}
+
+              {showAccountEmptyState ? (
+                <div>
+                  {renderSmartSuggestionBanners()}
+                  <section
+                    className={`${METRIC_CARD_CLASS} mt-8 flex flex-col items-center justify-center px-6 py-16 text-center`}
+                  >
+                    <span className="text-5xl" aria-hidden="true">
+                      📄
+                    </span>
+                    <h2 className="mt-6 text-xl font-bold text-[#ECEEF2]">
+                      Belum ada statement
+                    </h2>
+                    <p className="mt-2 max-w-md text-sm leading-relaxed text-[#8B92A5]">
+                      Upload statement {selectedAccount?.bank || "bank"} kamu untuk
+                      mulai analisa keuangan
+                    </p>
+                  </section>
+                </div>
+              ) : (
+                <>
+                  {renderSmartSuggestionBanners()}
+
+                  {transactions.length > 0 && !selectedAccountId ? (
+                    <section className={`${METRIC_CARD_CLASS} mt-8 overflow-hidden`}>
+                      <div className="flex items-center justify-between gap-3 p-5">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <h2 className="text-xl font-bold text-[#63B3ED]">
+                            ✨ AI Insight
+                          </h2>
+                          <button
+                            type="button"
+                            onClick={() => void handleRefreshInsights()}
+                            disabled={isRefreshingInsights}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.08)] text-sm text-[#8B92A5] transition hover:border-[rgba(99,179,237,0.3)] hover:text-[#63B3ED] disabled:cursor-not-allowed disabled:opacity-50"
+                            aria-label="Refresh AI Insight"
+                            title="Refresh AI Insight"
                           >
-                            {(transaction?.jenis === "income"
-                              ? incomeCategoryOptions
-                              : expenseCategoryOptions
-                            ).map((category) => {
-                              const normalizedCategory = normalizeKategori(category);
-                              return (
-                                <option key={normalizedCategory} value={normalizedCategory}>
-                                  {emojiMap[normalizedCategory] || "📦"} {normalizedCategory}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        )}
-                      </td>
-                      <td
-                        ref={isEditingNote ? noteEditorRef : null}
-                        className="px-4 py-3 text-[#8B92A5]"
-                      >
-                        <TransactionNoteCell
-                          transaction={transaction}
-                          note={savedNote}
-                          isEditing={isEditingNote}
-                          draftNote={draftNote}
-                          onDraftChange={setDraftNote}
-                          onStartEdit={() =>
-                            handleStartNoteEdit(transaction, originalIndex)
+                            {isRefreshingInsights ? "…" : "🔄"}
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleAiInsight}
+                          className={`shrink-0 text-sm text-[#8B92A5] transition-transform duration-300 ${
+                            aiInsightExpanded ? "rotate-180" : ""
+                          }`}
+                          aria-expanded={aiInsightExpanded}
+                          aria-label={
+                            aiInsightExpanded
+                              ? "Tutup AI Insight"
+                              : "Buka AI Insight"
                           }
-                          onSave={handleSaveNoteEdit}
-                          onCancel={handleCancelNoteEdit}
-                          inputRef={noteInputRef}
+                        >
+                          ▼
+                        </button>
+                      </div>
+                      <div
+                        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                          aiInsightExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="border-t border-[rgba(255,255,255,0.06)] px-5 pb-5 pt-4">
+                            {insights.length > 0 ? (
+                              <>
+                                <p className="text-sm text-[#8B92A5]">
+                                  Analisa personal berdasarkan pola spending kamu
+                                </p>
+                                <ul className="mt-4 space-y-3">
+                                  {insights.map((insight, index) => (
+                                    <li
+                                      key={`insight-${index}`}
+                                      className={`glass-card ${INSIGHT_VARIANTS[index % INSIGHT_VARIANTS.length]} px-4 py-3 text-sm leading-relaxed text-[#8B92A5]`}
+                                    >
+                                      <span className="mr-2 font-bold text-[#63B3ED]">
+                                        {index + 1}.
+                                      </span>
+                                      {insight}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            ) : (
+                              <p className="text-sm leading-relaxed text-[#8B92A5]">
+                                ✨ AI Insight akan muncul setelah kamu upload bank
+                                statement
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null}
+
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricCard
+                      icon="💰"
+                      title="Total Pemasukan"
+                      value={
+                        totalPemasukan > 0
+                          ? `Rp ${formatRupiah(totalPemasukan)}`
+                          : "-"
+                      }
+                      trendLabel={
+                        metricTrends.incomeTrend !== null
+                          ? `${formatTrendPercent(metricTrends.incomeTrend)} vs bulan lalu`
+                          : null
+                      }
+                      trendPositive={(metricTrends.incomeTrend ?? 0) >= 0}
+                      iconBg="rgba(104,211,145,0.15)"
+                    />
+                    <MetricCard
+                      icon="💸"
+                      title="Total Pengeluaran"
+                      value={
+                        totalPengeluaran > 0
+                          ? `Rp ${formatRupiah(totalPengeluaran)}`
+                          : "-"
+                      }
+                      trendLabel={
+                        metricTrends.expenseTrend !== null
+                          ? `${formatTrendPercent(metricTrends.expenseTrend)} vs bulan lalu`
+                          : null
+                      }
+                      trendPositive={(metricTrends.expenseTrend ?? 0) <= 0}
+                      iconBg="rgba(252,129,129,0.15)"
+                    />
+                    <MetricCard
+                      icon="↔️"
+                      title="Move Money"
+                      value={
+                        moveMoneySummary.total > 0
+                          ? `Rp ${formatRupiah(moveMoneySummary.total)}`
+                          : "-"
+                      }
+                      subtitle={`${moveMoneySummary.count} transaksi`}
+                      iconBg="rgba(139,146,165,0.15)"
+                    />
+                    <MetricCard
+                      icon="📊"
+                      title="Saving Rate"
+                      value={totalPemasukan > 0 ? `${savingRate}%` : "-"}
+                      subtitle="Pemasukan - Pengeluaran / Pemasukan"
+                      iconBg="rgba(99,179,237,0.15)"
+                    />
+                  </div>
+
+                  <div className="mt-8 grid gap-6 lg:grid-cols-5">
+                    <div className={`${METRIC_CARD_CLASS} lg:col-span-3`}>
+                      <h2 className="text-lg font-bold text-[#ECEEF2]">
+                        Ringkasan per Bulan
+                      </h2>
+                      <div className="mt-6 space-y-8">
+                        <MonthlyStackedBarChart
+                          title="Pemasukan"
+                          data={monthlyStackedCharts.pemasukanChartData}
+                          stackKeys={monthlyStackedCharts.pemasukanKeys}
+                          getColor={monthlyStackedCharts.getIncomeColor}
+                          selectedBulan={selectedBulan}
                         />
-                      </td>
-                    </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[#8B92A5]">
-                      {monthFilteredTransactions.length > 0
-                        ? "Tidak ada transaksi pada kategori ini."
-                        : "Belum ada data transaksi. Silakan upload statement terlebih dahulu."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-          </div>
-        )}
-      </main>
+                        <MonthlyStackedBarChart
+                          title="Pengeluaran"
+                          data={monthlyStackedCharts.pengeluaranChartData}
+                          stackKeys={monthlyStackedCharts.pengeluaranKeys}
+                          getColor={monthlyStackedCharts.getExpenseColor}
+                          selectedBulan={selectedBulan}
+                        />
+                      </div>
+                    </div>
+                    <div className={`${METRIC_CARD_CLASS} lg:col-span-2`}>
+                      <h2 className="text-lg font-bold text-[#ECEEF2]">
+                        Spending Breakdown
+                      </h2>
+                      <div className="mt-4">
+                        <DonutSpendingChart
+                          data={displayExpenseCategorySummary}
+                          getColor={monthlyStackedCharts.getExpenseColor}
+                          emojiMap={emojiMap}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <section className="mt-8">
+                    <h2 className="text-lg font-bold text-[#ECEEF2]">
+                      Ringkasan per Kategori
+                    </h2>
+                    <p className="mt-1 text-sm text-[#8B92A5]">
+                      {selectedBulan
+                        ? `Data ${formatBulanLabel(selectedBulan)}`
+                        : "Semua periode — trend dibanding bulan lalu"}
+                    </p>
+                    <div className="mt-6">{renderCategorySummarySections()}</div>
+                  </section>
+                </>
+              )}
+            </main>
 
       <AddAccountUploadModal
         isOpen={showAddAccountModal}
@@ -3519,116 +4856,7 @@ export default function DashboardPage() {
         </div>
       ) : null}
 
-      {categoryRulePrompt ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className="flex w-full max-w-2xl max-h-[500px] flex-col overflow-hidden vale-modal rounded-2xl shadow-xl">
-            <div className="border-b border-[rgba(255,255,255,0.08)] px-6 py-5">
-              <h3 className="text-lg font-bold text-[#63B3ED]">
-                Terapkan Kategori ke Transaksi Serupa?
-              </h3>
-              <p className="mt-1 text-sm text-[#8B92A5]">
-                Pilih transaksi yang mau dikategorikan sebagai &apos;
-                {categoryRulePrompt.newCategory}&apos;
-              </p>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-3">
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]">
-                <input
-                  type="checkbox"
-                  checked={
-                    categoryRulePrompt.selectedIndices.length ===
-                      categoryRulePrompt.matchingIndices.length &&
-                    categoryRulePrompt.matchingIndices.length > 0
-                  }
-                  onChange={(event) => handleToggleSelectAll(event.target.checked)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
-                />
-                <span className="text-sm font-semibold text-[#ECEEF2]">Pilih Semua</span>
-              </label>
-
-              <div className="mt-1 divide-y divide-[rgba(255,255,255,0.04)]">
-                {categoryRulePrompt.matchingIndices.map((transactionIndex) => {
-                  const transaction = transactions[transactionIndex];
-                  const debit = parseAmount(transaction?.debit);
-                  const kredit = parseAmount(transaction?.kredit);
-                  const isSelected = categoryRulePrompt.selectedIndices.includes(
-                    transactionIndex,
-                  );
-
-                  return (
-                    <label
-                      key={transactionIndex}
-                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(event) =>
-                          handleToggleTransactionSelection(
-                            transactionIndex,
-                            event.target.checked,
-                          )
-                        }
-                        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-[#63B3ED]"
-                      />
-                      <div className="min-w-0 flex-1 text-sm">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <span className="shrink-0 text-[#8B92A5]">
-                            {transaction?.tanggal || "-"}
-                          </span>
-                          <span className="min-w-0 flex-1 text-[#ECEEF2]">
-                            {transaction?.deskripsi || "-"}
-                          </span>
-                          <span className="shrink-0 font-medium">
-                            {debit > 0 ? (
-                              <span className="text-[#FC8181]">{formatRupiah(debit)}</span>
-                            ) : kredit > 0 ? (
-                              <span className="text-[#68D391]">{formatRupiah(kredit)}</span>
-                            ) : (
-                              <span className="text-[#8B92A5]">-</span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-4 border-t border-[rgba(255,255,255,0.08)] px-6 py-4">
-              <span className="text-sm text-[#8B92A5]">
-                [{categoryRulePrompt.selectedIndices.length}] transaksi dipilih
-              </span>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleApplyThisTransactionOnly}
-                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
-                >
-                  Transaksi Ini Saja
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelCategoryRule}
-                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApplyCategoryRule}
-                  disabled={categoryRulePrompt.selectedIndices.length === 0}
-                  className="btn-primary rounded-full px-4 py-2 text-sm font-semibold transition btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Terapkan
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {renderCategoryDrawer()}
 
       {toastMessage ? (
         <div className="fixed bottom-24 left-1/2 z-[70] -translate-x-1/2 vale-toast rounded-lg px-5 py-3 text-sm font-semibold">
@@ -3638,7 +4866,7 @@ export default function DashboardPage() {
 
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         {isChatOpen ? (
-          <div className="flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+          <div className="glass-panel flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
             <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#20242E] px-4 py-3">
               <div>
                 <p className="font-semibold text-[#ECEEF2]">💰 Financial Advisor</p>
@@ -3725,8 +4953,8 @@ export default function DashboardPage() {
           💬
         </button>
       </div>
-        </div>
+        </>
       )}
-    </div>
+    </>
   );
 }

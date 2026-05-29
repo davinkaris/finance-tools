@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import Navbar from "../../components/Navbar";
 import {
   deleteAccount,
   getAccounts,
@@ -318,10 +317,8 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="vale-page font-body relative min-h-screen">
-      <Navbar />
-
-      <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
+    <>
+      <main className="flex-1 overflow-y-auto bg-transparent p-6 lg:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-4xl">
             Akun Saya
@@ -382,7 +379,7 @@ export default function AccountsPage() {
               return (
                 <div
                   key={account.id}
-                  className="vale-card vale-card-hover flex flex-col rounded-2xl p-5"
+                  className="glass-card vale-card-hover flex flex-col rounded-2xl p-5"
                 >
                   {hasStatement ? (
                     <>
@@ -852,6 +849,6 @@ export default function AccountsPage() {
           {toastMessage}
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import AppShell from "../components/AppShell";
+import BackgroundLayer from "../components/BackgroundLayer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,8 +43,9 @@ export default function RootLayout({
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} ${playfair.variable} h-full antialiased`}
     >
-      <body className="font-body flex min-h-full flex-col bg-[#111318] text-[#ECEEF2]">
-        {children}
+      <body className="font-body relative flex min-h-full flex-col bg-transparent text-[#ECEEF2]">
+        <BackgroundLayer />
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

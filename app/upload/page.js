@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Navbar from "../../components/Navbar";
 import { getAccounts, saveAccount } from "../../lib/accounts";
 import { safeArray } from "../../lib/safeArray";
 import { loadCategoryRules } from "../../lib/categoryRules";
@@ -111,12 +110,9 @@ export default function UploadPage() {
   return (
     <Suspense
       fallback={
-        <div className="vale-page font-body">
-          <Navbar />
-          <main className="relative z-10 mx-auto flex w-full max-w-4xl items-center justify-center px-6 py-20">
-            <p className="text-sm text-[#8B92A5]">Memuat...</p>
-          </main>
-        </div>
+        <main className="flex flex-1 items-center justify-center p-6">
+          <p className="text-sm text-[#8B92A5]">Memuat...</p>
+        </main>
       }
     >
       <UploadPageContent />
@@ -362,7 +358,7 @@ function UploadPageContent() {
             type="button"
             disabled={isLoading}
             onClick={() => handleSelectExistingAccount(account.id)}
-            className={`vale-card flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            className={`glass-card flex items-center gap-3 rounded-xl px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-60 ${
               isSelected
                 ? "vale-account-selected border-[#63B3ED]"
                 : "border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.12)]"
@@ -565,10 +561,6 @@ function UploadPageContent() {
         });
 
         await saveTransactions(matchResult.transactions);
-        localStorage.setItem(
-          "aiInsights",
-          JSON.stringify(result.insights || []),
-        );
 
         localStorage.setItem(
           "uploadNotification",
@@ -607,10 +599,7 @@ function UploadPageContent() {
   };
 
   return (
-    <div className="vale-page font-body relative min-h-screen">
-      <Navbar />
-
-      <main className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-6 py-16 md:px-10 md:py-20">
+    <main className="flex-1 overflow-y-auto bg-transparent px-6 py-16 md:px-10 md:py-20">
         <section className="w-full text-center">
           <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-5xl">
             Upload Bank Statement Kamu
@@ -768,7 +757,7 @@ function UploadPageContent() {
               </p>
 
               {selectedFile ? (
-                <div className="vale-card mt-4 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#8B92A5]">
+                <div className="glass-card mt-4 inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#8B92A5]">
                   <span className="truncate">📄 {selectedFile.name}</span>
                   <button
                     type="button"
@@ -890,6 +879,5 @@ function UploadPageContent() {
           ) : null}
         </section>
       </main>
-    </div>
   );
 }

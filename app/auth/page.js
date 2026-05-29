@@ -218,7 +218,7 @@ export default function AuthPage() {
     "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1E2129] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
 
   return (
-    <div className="vale-page font-body relative flex min-h-screen flex-col items-center justify-center bg-[#111318] px-6 py-12">
+    <div className="vale-page font-body relative flex min-h-screen flex-col items-center justify-center bg-transparent px-6 py-12">
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -top-32 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-[#63B3ED] opacity-[0.06] blur-[80px]" />
       </div>

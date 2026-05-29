@@ -235,8 +235,6 @@ export default function OnboardingPage() {
     });
 
     await saveTransactions(matchResult.transactions);
-    localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
-
     localStorage.setItem(
       "uploadNotification",
       JSON.stringify({
@@ -312,14 +310,14 @@ export default function OnboardingPage() {
 
   if (checkingProfile) {
     return (
-      <div className="font-body flex min-h-screen items-center justify-center bg-[#111318] text-[#8B92A5]">
+      <div className="font-body flex min-h-screen items-center justify-center bg-transparent text-[#8B92A5]">
         Memuat...
       </div>
     );
   }
 
   return (
-    <div className="font-body min-h-screen bg-[#111318] px-4 py-10 text-[#ECEEF2] sm:px-6">
+    <div className="font-body min-h-screen bg-transparent px-4 py-10 text-[#ECEEF2] sm:px-6">
       <div className="mx-auto w-full max-w-xl">
         <div className="mb-6 text-center">
           <span className="font-serif-display text-2xl tracking-tight text-[#ECEEF2]">
@@ -574,7 +572,7 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="space-y-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#111318] p-4 text-sm text-[#8B92A5]">
+              <div className="glass-card space-y-2 rounded-xl p-4 text-sm text-[#8B92A5]">
                 <p>
                   📅 Umur:{" "}
                   <span className="text-[#ECEEF2]">
@@ -619,7 +617,7 @@ export default function OnboardingPage() {
                     const file = event.dataTransfer?.files?.[0];
                     if (file) setPdfFile(file);
                   }}
-                  className="mt-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[#111318] px-4 py-8 text-center"
+                  className="glass-card mt-3 rounded-xl border border-dashed border-[rgba(255,255,255,0.12)] px-4 py-8 text-center"
                 >
                   <p className="text-sm text-[#8B92A5]">
                     {selectedFile

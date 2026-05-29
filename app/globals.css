@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base: #111318;
+  --bg-base: #0a0f1e;
   --bg-elevated: #1a1d25;
   --bg-subtle: #20242e;
   --bg-input: #1e2129;
@@ -27,6 +27,17 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
 
+  --glass-bg: rgba(17, 19, 24, 0.85);
+  --glass-bg-hover: rgba(17, 19, 24, 0.9);
+  --glass-bg-solid: rgba(17, 19, 24, 0.95);
+  --glass-sidebar-bg: rgba(13, 17, 23, 0.95);
+  --glass-blur: blur(40px);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
   --background: var(--bg-base);
   --foreground: var(--text-primary);
 }
@@ -49,7 +60,7 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #111318;
+  background: #0a0f1e;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -273,23 +284,280 @@ select option {
   color: #eceef2;
 }
 
+html,
+body {
+  min-height: 100%;
+  background-color: #0a0f1e;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40px, -60px) scale(1.05);
+  }
+  66% {
+    transform: translate(-30px, 30px) scale(0.95);
+  }
+}
+
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: #0a0f1e;
+}
+
+.bg-orbs__orb {
+  position: absolute;
+  border-radius: 50%;
+  animation: float 20s infinite ease-in-out;
+  will-change: transform;
+}
+
+.bg-orbs__orb--1 {
+  width: 700px;
+  height: 700px;
+  background: rgba(99, 179, 237, 0.12);
+  top: -200px;
+  left: -200px;
+  filter: blur(120px);
+  animation-duration: 20s;
+}
+
+.bg-orbs__orb--2 {
+  width: 600px;
+  height: 600px;
+  background: rgba(66, 153, 225, 0.08);
+  bottom: -150px;
+  right: -150px;
+  filter: blur(150px);
+  animation-duration: 25s;
+  animation-direction: reverse;
+}
+
+.bg-orbs__orb--3 {
+  width: 400px;
+  height: 400px;
+  background: rgba(147, 197, 253, 0.06);
+  top: 40%;
+  right: 20%;
+  filter: blur(100px);
+  animation-duration: 15s;
+  animation-delay: 5s;
+}
+
+.bg-dot-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image: radial-gradient(
+    circle,
+    rgba(99, 179, 237, 0.08) 1px,
+    transparent 1px
+  );
+  background-size: 40px 40px;
+}
+
 /* Vale app utilities — soft dark */
 .vale-page {
   min-height: 100vh;
-  background: #111318;
+  background: transparent;
   color: #eceef2;
 }
 
 .vale-modal {
-  background: #1a1d25;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  background: var(--glass-bg-solid);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .vale-card {
   background: #1a1d25;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-sm);
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.glass-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-panel {
+  background: var(--glass-bg-solid);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-sidebar {
+  background: var(--glass-sidebar-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+@keyframes category-dropdown-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.category-dropdown-enter {
+  transform-origin: top left;
+  animation: category-dropdown-in 0.15s ease forwards;
+}
+
+@keyframes category-badge-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(104, 211, 145, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(104, 211, 145, 0.45);
+  }
+}
+
+.category-badge-flash {
+  animation: category-badge-flash 0.5s ease;
+}
+
+@keyframes category-check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.category-check-pop {
+  animation: category-check-pop 0.2s ease forwards;
+}
+
+@keyframes note-input-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.note-input-enter {
+  transform-origin: top left;
+  animation: note-input-in 0.15s ease forwards;
+}
+
+@keyframes drawer-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.category-drawer-panel {
+  animation: drawer-slide-in 0.25s ease forwards;
+}
+
+.category-summary-card {
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.category-summary-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 20px 48px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.category-summary-card-hint {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.group\/card:hover .category-summary-card-hint {
+  opacity: 1;
+}
+
+.category-summary-card--empty {
+  opacity: 0.5;
+}
+
+@keyframes category-card-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.category-card-exit {
+  animation: category-card-fade-out 0.3s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes note-save-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(104, 211, 145, 0.12);
+  }
+}
+
+.note-save-flash {
+  animation: note-save-flash 0.5s ease;
+}
+
+.vale-page > header {
+  background: rgba(10, 14, 26, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
 .vale-card-hover {
@@ -339,10 +607,12 @@ select option {
 }
 
 .vale-toast {
-  background: #1a1d25;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-solid);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-left: 3px solid #63b3ed;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--glass-shadow);
   color: #eceef2;
 }
 
