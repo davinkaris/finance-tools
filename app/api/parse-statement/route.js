@@ -1,3 +1,5 @@
+import { createClient } from "@supabase/supabase-js";
+import { generateId } from "../../../lib/accounts";
 import { applyCategoryRulesWithCount } from "../../../lib/categoryRules";
 import { applyNotesRulesWithCount } from "../../../lib/notesRules";
 import {
@@ -11,6 +13,18 @@ import {
   inferJenisFromAmounts,
   processTransaction,
 } from "../../../lib/transactionJenis";
+import { buildTransactionRows } from "../../../lib/transactionsStore";
+import { computeUploadDateRange } from "../../../lib/uploadHistory";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+    : null;
 
 export async function POST(request) {
   const parseAmount = (value) => {
@@ -76,6 +90,34 @@ export async function POST(request) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     const formData = await request.formData()
+    const accessToken = formData.get("accessToken")
+      ? String(formData.get("accessToken"))
+      : null
+
+    if (!accessToken) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    if (!supabaseAdmin) {
+      return Response.json(
+        {
+          error:
+            "SUPABASE_SERVICE_ROLE_KEY belum dikonfigurasi. Tambahkan ke .env.local dari Supabase Dashboard → Settings → API.",
+        },
+        { status: 500 },
+      )
+    }
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(accessToken)
+
+    if (authError || !user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const userId = user.id
     const file = formData.get("file")
     const accountId = formData.get("accountId")
       ? String(formData.get("accountId"))
@@ -389,6 +431,41 @@ Jangan return apapun selain JSON murni.`
       matchedTransactionId: null,
       matchType: null,
     }))
+
+    const transactionRows = buildTransactionRows(transactionsWithAccount, userId)
+
+    const { error: upsertError } = await supabaseAdmin
+      .from("transactions")
+      .upsert(transactionRows, { onConflict: "id" })
+
+    if (upsertError) {
+      console.error("save transactions error:", upsertError.message)
+      return Response.json(
+        { error: "Gagal menyimpan transaksi ke database." },
+        { status: 500 },
+      )
+    }
+
+    const { dateRange, dateRangeStart, dateRangeEnd } =
+      computeUploadDateRange(transactionsWithAccount)
+
+    const { error: historyError } = await supabaseAdmin
+      .from("upload_history")
+      .insert({
+        id: generateId(),
+        user_id: userId,
+        account_id: accountId,
+        file_name: file.name || "statement.pdf",
+        uploaded_at: new Date().toISOString(),
+        transaction_count: transactionsWithAccount.length,
+        date_range: dateRange,
+        date_range_start: dateRangeStart,
+        date_range_end: dateRangeEnd,
+      })
+
+    if (historyError) {
+      console.error("save upload history error:", historyError.message)
+    }
 
     return Response.json({
       transactions: transactionsWithAccount,

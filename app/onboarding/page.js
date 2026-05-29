@@ -26,7 +26,6 @@ import {
   getTransactions,
   saveTransactions,
 } from "../../lib/transactionsStore";
-import { addUploadHistoryEntry } from "../../lib/uploadHistory";
 
 const inputClass =
   "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1E2129] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
@@ -202,6 +201,14 @@ export default function OnboardingPage() {
       formData.append("notesRules", JSON.stringify(savedNotesRules));
     }
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error("Sesi login tidak valid. Silakan login ulang.");
+    }
+    formData.append("accessToken", session.access_token);
+
     const response = await fetch("/api/parse-statement", {
       method: "POST",
       body: formData,
@@ -229,16 +236,6 @@ export default function OnboardingPage() {
 
     await saveTransactions(matchResult.transactions);
     localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
-
-    await addUploadHistoryEntry({
-      accountId,
-      fileName: file.name,
-      transactions:
-        uniqueNewTransactions.length > 0
-          ? uniqueNewTransactions
-          : newTransactions,
-      transactionCount: uniqueNewTransactions.length,
-    });
 
     localStorage.setItem(
       "uploadNotification",

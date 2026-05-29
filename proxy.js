@@ -12,7 +12,7 @@ async function isOnboardingCompleted(supabase, userId) {
   return data?.onboarding_completed === true;
 }
 
-export async function middleware(request) {
+export async function proxy(request) {
   const response = NextResponse.next();
   const pathname = request.nextUrl.pathname;
 
@@ -33,8 +33,8 @@ export async function middleware(request) {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const protectedRoutes = ["/dashboard", "/accounts", "/upload"];
   const isProtected = protectedRoutes.some((route) =>
@@ -42,14 +42,14 @@ export async function middleware(request) {
   );
   const isOnboarding = pathname.startsWith("/onboarding");
 
-  if ((isProtected || isOnboarding) && !session) {
+  if ((isProtected || isOnboarding) && !user) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
-  if (session) {
+  if (user) {
     const onboardingDone = await isOnboardingCompleted(
       supabase,
-      session.user.id,
+      user.id,
     );
 
     if (isProtected && !onboardingDone) {

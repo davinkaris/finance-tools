@@ -12,7 +12,7 @@ import {
   getTransactions,
   saveTransactions,
 } from "../lib/transactionsStore";
-import { addUploadHistoryEntry } from "../lib/uploadHistory";
+import { supabase } from "../lib/supabase";
 import PdfPasswordFields, {
   PDF_PASSWORD_UNSUPPORTED_CODE,
 } from "./PdfPasswordFields";
@@ -233,6 +233,17 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
         formData.append("pdfPassword", pdfPassword.trim());
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert("Sesi login tidak valid. Silakan login ulang.");
+        setProgressPercent(0);
+        setStageLabel("");
+        return;
+      }
+      formData.append("accessToken", session.access_token);
+
       const response = await fetch("/api/parse-statement", {
         method: "POST",
         body: formData,
@@ -273,16 +284,6 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
 
       await saveTransactions(matchResult.transactions);
       localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
-
-      await addUploadHistoryEntry({
-        accountId: createdAccount.id,
-        fileName: selectedFile.name,
-        transactions:
-          uniqueNewTransactions.length > 0
-            ? uniqueNewTransactions
-            : newTransactions,
-        transactionCount: uniqueNewTransactions.length,
-      });
 
       const autoAppliedCount = Number(result.autoAppliedCount || 0);
       if (autoAppliedCount > 0) {

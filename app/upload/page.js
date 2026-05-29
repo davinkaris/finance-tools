@@ -15,7 +15,7 @@ import {
   getTransactions,
   saveTransactions,
 } from "../../lib/transactionsStore";
-import { addUploadHistoryEntry } from "../../lib/uploadHistory";
+import { supabase } from "../../lib/supabase";
 
 const STAGES = [
   { label: "Membaca bank statement...", progress: 25 },
@@ -505,6 +505,15 @@ function UploadPageContent() {
         formData.append("notesRules", JSON.stringify(savedNotesRules));
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        handleUploadFailure("Sesi login tidak valid. Silakan login ulang.");
+        return;
+      }
+      formData.append("accessToken", session.access_token);
+
       const response = await fetch("/api/parse-statement", {
         method: "POST",
         body: formData,
@@ -560,16 +569,6 @@ function UploadPageContent() {
           "aiInsights",
           JSON.stringify(result.insights || []),
         );
-
-        await addUploadHistoryEntry({
-          accountId: selectedAccountId,
-          fileName: selectedFile.name,
-          transactions:
-            uniqueNewTransactions.length > 0
-              ? uniqueNewTransactions
-              : newTransactions,
-          transactionCount: uniqueNewTransactions.length,
-        });
 
         localStorage.setItem(
           "uploadNotification",
