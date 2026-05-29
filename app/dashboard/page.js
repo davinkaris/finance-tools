@@ -46,13 +46,22 @@ import {
   runTransactionMatching,
 } from "../../lib/transactionMatching";
 import { getAccounts, saveAccount } from "../../lib/accounts";
+import { safeArray } from "../../lib/safeArray";
 import { getProfile } from "../../lib/profiles";
 import { supabase } from "../../lib/supabase";
+import {
+  deleteTransactionsByUpload,
+  getTransactions,
+  saveTransactions,
+} from "../../lib/transactionsStore";
+import {
+  getUserPreferences,
+  saveUserPreferences,
+} from "../../lib/userPreferences";
 import {
   deleteUploadHistoryEntry,
   getUploadHistory,
   removeTransactionsForUploadEntry,
-  syncLegacyTransactionsAndHistory,
 } from "../../lib/uploadHistory";
 import Navbar from "../../components/Navbar";
 import AddAccountUploadModal from "../../components/AddAccountUploadModal";
@@ -313,8 +322,6 @@ const COLOR_OPTIONS = [
 const QUICK_ACTION_BUTTON_CLASS =
   "inline-flex items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-2 text-[13px] font-semibold text-[#ECEEF2] transition hover:border-[rgba(99,179,237,0.3)] hover:bg-[rgba(99,179,237,0.1)]";
 
-const PERMANENTLY_DISMISSED_KEY = "permanentlyDismissed";
-const PROFILE_FULL_NAME_KEY = "valeProfileFullName";
 
 const SUGGESTION_BANKS = [
   "BCA",
@@ -413,22 +420,6 @@ const computeSmartStatementSuggestions = (
     userName: displayName,
     transactions: matchedTransactions,
   }));
-};
-
-const loadPermanentlyDismissed = () => {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(PERMANENTLY_DISMISSED_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const persistPermanentlyDismissed = (banks) => {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(PERMANENTLY_DISMISSED_KEY, JSON.stringify(banks));
 };
 
 const StackedBarTooltip = ({ active, payload, label }) => {
@@ -621,6 +612,43 @@ function TransactionNoteCell({
   );
 }
 
+function DashboardLoadingSkeleton() {
+  return (
+    <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
+      <div className="h-10 w-72 max-w-full animate-pulse rounded-lg bg-[#20242E]" />
+      <div className="mt-6 flex gap-2 overflow-hidden">
+        {[1, 2, 3, 4].map((item) => (
+          <div
+            key={item}
+            className="h-9 w-28 shrink-0 animate-pulse rounded-full bg-[#20242E]"
+          />
+        ))}
+      </div>
+      <div className="mt-8 h-14 animate-pulse rounded-2xl bg-[#20242E]" />
+      <div className="mt-8 grid gap-8 lg:grid-cols-2">
+        <div className="h-64 animate-pulse rounded-2xl bg-[#20242E]" />
+        <div className="h-64 animate-pulse rounded-2xl bg-[#20242E]" />
+      </div>
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <div
+            key={item}
+            className="h-28 animate-pulse rounded-2xl bg-[#20242E]"
+          />
+        ))}
+      </div>
+      <div className="mt-8 space-y-3">
+        {[1, 2, 3, 4, 5].map((item) => (
+          <div
+            key={item}
+            className="h-14 animate-pulse rounded-xl bg-[#20242E]"
+          />
+        ))}
+      </div>
+    </main>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState([]);
@@ -671,6 +699,7 @@ export default function DashboardPage() {
   const [notesRulePrompt, setNotesRulePrompt] = useState(null);
   const [transactionNotes, setTransactionNotes] = useState({});
   const [accounts, setAccounts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showAssignAccountModal, setShowAssignAccountModal] = useState(false);
   const [assignAccountId, setAssignAccountId] = useState("");
   const [editingNoteKey, setEditingNoteKey] = useState(null);
@@ -683,118 +712,155 @@ export default function DashboardPage() {
 
   const bankOptions = formTipe === "cc" ? CC_OPTIONS : BANK_OPTIONS;
 
-  const applyTransactionMatching = (transactionList, userName = "") => {
-    const resolvedName =
-      userName ||
-      userFullName ||
-      (typeof window !== "undefined"
-        ? localStorage.getItem(PROFILE_FULL_NAME_KEY) || ""
-        : "");
-    const accountList = getAccounts();
+  const applyTransactionMatching = async (
+    transactionList,
+    userName = "",
+    accountList = accounts,
+  ) => {
+    const resolvedName = userName || userFullName || "";
     const result = runTransactionMatching(transactionList, accountList, {
       userName: resolvedName,
     });
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "parsedTransactions",
-        JSON.stringify(result.transactions),
-      );
-    }
-
+    await saveTransactions(result.transactions);
     return result.transactions;
   };
 
-  const loadTransactionsAndInsights = () => {
+  const persistAllTransactions = async (updatedTransactions) => {
+    setTransactions(updatedTransactions);
+    await saveTransactions(updatedTransactions);
+  };
+
+  const refreshDashboardData = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) return;
+
+    const [
+      accountListRaw,
+      rawTransactionsRaw,
+      uploadHistoryListRaw,
+      categoryRulesRaw,
+      notesRulesRaw,
+      preferences,
+      profile,
+    ] = await Promise.all([
+      getAccounts(),
+      getTransactions(),
+      getUploadHistory(),
+      loadCategoryRules(),
+      loadNotesRules(),
+      getUserPreferences(),
+      getProfile(),
+    ]);
+
+    const accountList = safeArray(accountListRaw);
+    const rawTransactions = safeArray(rawTransactionsRaw);
+    const uploadHistoryList = safeArray(uploadHistoryListRaw);
+    const categoryRules = safeArray(categoryRulesRaw);
+    const notesRules = safeArray(notesRulesRaw);
+
+    setAccounts(accountList);
+    setUploadHistory(uploadHistoryList);
+    setCustomCategories(safeArray(preferences.customCategories));
+    setCategoryRenames(
+      preferences.categoryRenames && typeof preferences.categoryRenames === "object"
+        ? preferences.categoryRenames
+        : {},
+    );
+    setCategoryEmojiOverrides(
+      preferences.categoryEmojiOverrides &&
+        typeof preferences.categoryEmojiOverrides === "object"
+        ? preferences.categoryEmojiOverrides
+        : {},
+    );
+    setPermanentlyDismissed(safeArray(preferences.permanentlyDismissed));
+
+    let insightsData = safeArray(preferences.aiInsights);
     if (typeof window !== "undefined") {
-      syncLegacyTransactionsAndHistory();
-    }
-
-    setAccounts(getAccounts());
-    setUploadHistory(getUploadHistory());
-
-    const raw = localStorage.getItem("parsedTransactions");
-    const rawInsights = localStorage.getItem("aiInsights");
-
-    if (!raw) {
-      setTransactions([]);
-    } else {
       try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          let categoryRenamesLocal = {};
-          let customCats = [];
-          try {
-            const rawRenames = localStorage.getItem("categoryRenames");
-            if (rawRenames) categoryRenamesLocal = JSON.parse(rawRenames);
-            const rawCustom = localStorage.getItem("customCategories");
-            if (rawCustom) customCats = JSON.parse(rawCustom);
-          } catch {
-            categoryRenamesLocal = {};
-            customCats = [];
+        const rawInsights = localStorage.getItem("aiInsights");
+        if (rawInsights) {
+          const parsed = JSON.parse(rawInsights);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            insightsData = parsed;
+            await saveUserPreferences({ aiInsights: parsed });
+            localStorage.removeItem("aiInsights");
           }
-
-          const incomeNames = buildIncomeCategoryNames(
-            categoryRenamesLocal,
-            customCats,
-          );
-          const processed = processTransactions(
-            parsed.map((item) => ({
-              ...item,
-              kategori: normalizeKategori(item?.kategori),
-            })),
-            incomeNames,
-          );
-          const withCategories = applyCategoryRules(processed);
-          const withNotes = applyNotesRules(withCategories);
-          const mergedNotes = syncNotesFromTransactions(withNotes);
-          setTransactionNotes(mergedNotes);
-          setTransactions(
-            applyTransactionMatching(normalizeTransactions(withNotes)),
-          );
         }
       } catch {
-        setTransactions([]);
+        // ignore invalid insights cache from upload flow
       }
     }
+    setInsights(insightsData);
 
-    try {
-      const parsedInsights = rawInsights ? JSON.parse(rawInsights) : [];
-      setInsights(Array.isArray(parsedInsights) ? parsedInsights : []);
-    } catch {
-      setInsights([]);
+    const resolvedName =
+      profile?.full_name?.trim() ||
+      session.user?.user_metadata?.full_name?.trim() ||
+      "";
+    if (resolvedName) {
+      setUserFullName(resolvedName);
     }
+
+    const incomeNames = buildIncomeCategoryNames(
+      preferences.categoryRenames,
+      preferences.customCategories,
+    );
+
+    const processed = processTransactions(
+      rawTransactions.map((item) => ({
+        ...item,
+        kategori: normalizeKategori(item?.kategori),
+      })),
+      incomeNames,
+    );
+    const withCategories = await applyCategoryRules(processed, categoryRules);
+    const withNotes = await applyNotesRules(withCategories, notesRules);
+    const mergedNotes = {
+      ...loadTransactionNotes(),
+      ...syncNotesFromTransactions(withNotes),
+    };
+    setTransactionNotes(mergedNotes);
+
+    const matched = await applyTransactionMatching(
+      normalizeTransactions(withNotes),
+      resolvedName,
+      accountList,
+    );
+    setTransactions(matched);
   };
 
   useEffect(() => {
-    try {
-      const rawCustom = localStorage.getItem("customCategories");
-      if (rawCustom) {
-        const parsed = JSON.parse(rawCustom);
-        if (Array.isArray(parsed)) setCustomCategories(parsed);
+    let mounted = true;
+
+    const loadDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          if (mounted) setIsLoading(false);
+          return;
+        }
+
+        await refreshDashboardData();
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      const rawRenames = localStorage.getItem("categoryRenames");
-      if (rawRenames) {
-        const parsed = JSON.parse(rawRenames);
-        if (parsed && typeof parsed === "object") setCategoryRenames(parsed);
-      }
-      const rawEmojiOverrides = localStorage.getItem("categoryEmojiOverrides");
-      if (rawEmojiOverrides) {
-        const parsed = JSON.parse(rawEmojiOverrides);
-        if (parsed && typeof parsed === "object") setCategoryEmojiOverrides(parsed);
-      }
-      setTransactionNotes(loadTransactionNotes());
-      setAccounts(getAccounts());
-    } catch {
-      setCustomCategories([]);
-      setCategoryRenames({});
-      setCategoryEmojiOverrides({});
-    }
+    };
+
+    loadDashboardData();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
-    loadTransactionsAndInsights();
-    setPermanentlyDismissed(loadPermanentlyDismissed());
     try {
       const stored = localStorage.getItem(AI_INSIGHT_COLLAPSED_KEY);
       if (stored === "expanded") {
@@ -806,65 +872,49 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    let mounted = true;
+    if (!userFullName || transactions.length === 0) return;
 
-    const loadUserFullName = async () => {
+    let cancelled = false;
+
+    (async () => {
       try {
-        const cached = localStorage.getItem(PROFILE_FULL_NAME_KEY);
-        if (cached?.trim()) {
-          if (mounted) setUserFullName(cached.trim());
-          return;
-        }
-      } catch {
-        // ignore cache read errors
+        const matched = await applyTransactionMatching(
+          transactions,
+          userFullName,
+          accounts,
+        );
+        if (!cancelled) setTransactions(matched);
+      } catch (error) {
+        console.error("Failed to re-run transaction matching:", error);
       }
+    })();
 
-      try {
-        const profile = await getProfile();
-        if (profile?.full_name?.trim()) {
-          const name = profile.full_name.trim();
-          localStorage.setItem(PROFILE_FULL_NAME_KEY, name);
-          if (mounted) setUserFullName(name);
-          return;
-        }
-      } catch {
-        // ignore profile fetch errors
-      }
-
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        const metaName = user?.user_metadata?.full_name;
-        if (metaName?.trim()) {
-          const name = metaName.trim();
-          localStorage.setItem(PROFILE_FULL_NAME_KEY, name);
-          if (mounted) setUserFullName(name);
-        }
-      } catch {
-        // ignore auth fetch errors
-      }
-    };
-
-    loadUserFullName();
     return () => {
-      mounted = false;
+      cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (!userFullName) return;
-    setTransactions((prev) => {
-      if (prev.length === 0) return prev;
-      return applyTransactionMatching(prev, userFullName);
-    });
   }, [userFullName]);
 
   useEffect(() => {
-    setTransactions((prev) => {
-      if (prev.length === 0 || accounts.length === 0) return prev;
-      return applyTransactionMatching(prev);
-    });
+    if (transactions.length === 0 || accounts.length === 0) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const matched = await applyTransactionMatching(
+          transactions,
+          userFullName,
+          accounts,
+        );
+        if (!cancelled) setTransactions(matched);
+      } catch (error) {
+        console.error("Failed to re-run transaction matching:", error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [accounts.length]);
 
   useEffect(() => {
@@ -1441,7 +1491,7 @@ export default function DashboardPage() {
     setCategoryTypeWarningTransactions([]);
   };
 
-  const handleSaveEditCategory = () => {
+  const handleSaveEditCategory = async () => {
     const oldName = editingCategoryName;
     const newName = editCategoryName.trim();
 
@@ -1480,7 +1530,7 @@ export default function DashboardPage() {
         : item,
     );
     setTransactions(updatedTransactions);
-    localStorage.setItem("parsedTransactions", JSON.stringify(updatedTransactions));
+    await persistAllTransactions(updatedTransactions);
 
     const isCustom = customCategories.some((cat) => cat.name === oldName);
     if (isCustom) {
@@ -1495,7 +1545,7 @@ export default function DashboardPage() {
           : cat,
       );
       setCustomCategories(updatedCustom);
-      localStorage.setItem("customCategories", JSON.stringify(updatedCustom));
+      await saveUserPreferences({ customCategories: updatedCustom });
     } else {
       const defaultOrigin =
         resolveDefaultOrigin(oldName) ||
@@ -1504,7 +1554,7 @@ export default function DashboardPage() {
       if (newName !== defaultOrigin) {
         const updatedRenames = { ...categoryRenames, [defaultOrigin]: newName };
         setCategoryRenames(updatedRenames);
-        localStorage.setItem("categoryRenames", JSON.stringify(updatedRenames));
+        await saveUserPreferences({ categoryRenames: updatedRenames });
       }
 
       const updatedEmojiOverrides = {
@@ -1513,17 +1563,16 @@ export default function DashboardPage() {
       };
       if (newName !== oldName) delete updatedEmojiOverrides[oldName];
       setCategoryEmojiOverrides(updatedEmojiOverrides);
-      localStorage.setItem(
-        "categoryEmojiOverrides",
-        JSON.stringify(updatedEmojiOverrides),
-      );
+      await saveUserPreferences({
+        categoryEmojiOverrides: updatedEmojiOverrides,
+      });
     }
 
     if (activeCategory === oldName) setActiveCategory(newName);
     closeEditCategoryModal();
   };
 
-  const handleCreateCategory = () => {
+  const handleCreateCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) {
       alert("Nama kategori wajib diisi.");
@@ -1552,14 +1601,14 @@ export default function DashboardPage() {
     };
     const updated = [...customCategories, newCategory];
     setCustomCategories(updated);
-    localStorage.setItem("customCategories", JSON.stringify(updated));
+    await saveUserPreferences({ customCategories: updated });
     setShowCategoryModal(false);
     setNewCategoryName("");
     setSelectedEmoji("");
     setNewCategoryType("expense");
   };
 
-  const handleDeleteCustomCategory = (name) => {
+  const handleDeleteCustomCategory = async (name) => {
     const inUse = transactions.some(
       (t) => normalizeKategori(t.kategori) === name,
     );
@@ -1570,7 +1619,7 @@ export default function DashboardPage() {
 
     const updated = customCategories.filter((cat) => cat.name !== name);
     setCustomCategories(updated);
-    localStorage.setItem("customCategories", JSON.stringify(updated));
+    await saveUserPreferences({ customCategories: updated });
     if (activeCategory === name) setActiveCategory("all");
   };
 
@@ -1591,7 +1640,7 @@ export default function DashboardPage() {
     setShowAssignAccountModal(true);
   };
 
-  const handleAssignLegacyTransactions = () => {
+  const handleAssignLegacyTransactions = async () => {
     if (!assignAccountId) {
       alert("Pilih akun dulu.");
       return;
@@ -1609,15 +1658,14 @@ export default function DashboardPage() {
         : transaction,
     );
 
-    setTransactions(updated);
-    localStorage.setItem("parsedTransactions", JSON.stringify(updated));
+    await persistAllTransactions(updated);
     setShowAssignAccountModal(false);
     showToast(`✅ ${count} transaksi berhasil di-assign ke akun`);
   };
 
-  const handleAddAccountModalComplete = (account) => {
+  const handleAddAccountModalComplete = async (account) => {
     setShowAddAccountModal(false);
-    loadTransactionsAndInsights();
+    await refreshDashboardData();
     if (account?.id) {
       setSelectedAccountId(account.id);
     }
@@ -1657,15 +1705,18 @@ export default function DashboardPage() {
     }).length;
   };
 
-  const handleConfirmDeleteUpload = () => {
+  const handleConfirmDeleteUpload = async () => {
     if (!deleteUploadConfirm) return;
 
     const { entry } = deleteUploadConfirm;
-    const remaining = removeTransactionsForUploadEntry(entry, transactions);
-    localStorage.setItem("parsedTransactions", JSON.stringify(remaining));
-    deleteUploadHistoryEntry(entry.id);
+    await deleteTransactionsByUpload(
+      entry.accountId,
+      entry.dateRangeStart,
+      entry.dateRangeEnd,
+    );
+    await deleteUploadHistoryEntry(entry.id);
     setDeleteUploadConfirm(null);
-    loadTransactionsAndInsights();
+    await refreshDashboardData();
     showToast("🗑️ Statement berhasil dihapus");
   };
 
@@ -1697,7 +1748,7 @@ export default function DashboardPage() {
     setFormBank(tipe === "cc" ? CC_OPTIONS[0] : BANK_OPTIONS[0]);
   };
 
-  const handleSaveCreateAccount = () => {
+  const handleSaveCreateAccount = async () => {
     const nama = formNama.trim();
     if (!nama) {
       alert("Nama akun wajib diisi.");
@@ -1708,14 +1759,19 @@ export default function DashboardPage() {
       return;
     }
 
-    const newAccount = saveAccount({
+    const newAccount = await saveAccount({
       nama,
       tipe: formTipe,
       bank: formBank,
       warna: formWarna,
     });
 
-    loadTransactionsAndInsights();
+    if (!newAccount) {
+      alert("Gagal menyimpan akun.");
+      return;
+    }
+
+    await refreshDashboardData();
     setCreatedAccountSuccess({
       id: newAccount.id,
       nama: newAccount.nama,
@@ -1758,7 +1814,7 @@ export default function DashboardPage() {
     setPermanentlyDismissed((prev) => {
       if (prev.includes(bank)) return prev;
       const next = [...prev, bank];
-      persistPermanentlyDismissed(next);
+      void saveUserPreferences({ permanentlyDismissed: next });
       return next;
     });
     setConfirmDismissBank(null);
@@ -1967,26 +2023,23 @@ export default function DashboardPage() {
     });
   }, []);
 
-  const applyCategoryToIndices = (indices, category) => {
+  const applyCategoryToIndices = async (indices, category) => {
     const indexSet = new Set(indices);
-    setTransactions((prev) => {
-      const updated = prev.map((item, idx) =>
-        indexSet.has(idx)
-          ? { ...item, kategori: normalizeKategori(category) }
-          : item,
-      );
-      localStorage.setItem("parsedTransactions", JSON.stringify(updated));
-      return updated;
-    });
+    const updated = transactions.map((item, idx) =>
+      indexSet.has(idx)
+        ? { ...item, kategori: normalizeKategori(category) }
+        : item,
+    );
+    setTransactions(updated);
+    await saveTransactions(updated);
   };
 
-  const handleClearMoveMoneyMatch = (originalIndex) => {
+  const handleClearMoveMoneyMatch = async (originalIndex) => {
     const target = transactions[originalIndex];
     if (!target?.id || target.matchType !== "move_money") return;
 
     const updated = removeMoveMoneyMatch(transactions, target.id);
-    setTransactions(updated);
-    localStorage.setItem("parsedTransactions", JSON.stringify(updated));
+    await persistAllTransactions(updated);
   };
 
   const handleCategoryChange = (index, nextCategory, previousCategory) => {
@@ -2042,12 +2095,12 @@ export default function DashboardPage() {
     });
   };
 
-  const handleApplyCategoryRule = () => {
+  const handleApplyCategoryRule = async () => {
     if (!categoryRulePrompt) return;
     const { selectedIndices, newCategory, keyword } = categoryRulePrompt;
     if (selectedIndices.length === 0) return;
-    applyCategoryToIndices(selectedIndices, newCategory);
-    saveCategoryRule(
+    await applyCategoryToIndices(selectedIndices, newCategory);
+    await saveCategoryRule(
       keyword,
       newCategory,
       getNoteForTransaction(transactions[categoryRulePrompt.index]),
@@ -2056,11 +2109,11 @@ export default function DashboardPage() {
     setCategoryRulePrompt(null);
   };
 
-  const handleApplyThisTransactionOnly = () => {
+  const handleApplyThisTransactionOnly = async () => {
     if (!categoryRulePrompt) return;
     const { index, newCategory, keyword } = categoryRulePrompt;
-    applyCategoryToIndices([index], newCategory);
-    saveCategoryRule(
+    await applyCategoryToIndices([index], newCategory);
+    await saveCategoryRule(
       keyword,
       newCategory,
       getNoteForTransaction(transactions[index]),
@@ -2080,21 +2133,19 @@ export default function DashboardPage() {
   const hasNoteForTransaction = (transaction) =>
     Boolean(getNoteForTransaction(transaction).trim());
 
-  const persistNotesToIndices = (indices, noteText) => {
+  const persistNotesToIndices = async (indices, noteText) => {
     const trimmed = String(noteText || "").trim();
-    setTransactions((prev) => {
-      const indexSet = new Set(indices);
-      let notes = loadTransactionNotes();
-      const updated = prev.map((item, idx) => {
-        if (!indexSet.has(idx)) return item;
-        const key = getTransactionNoteKey(item);
-        notes = saveTransactionNote(key, trimmed);
-        return { ...item, notes: trimmed || undefined };
-      });
-      localStorage.setItem("parsedTransactions", JSON.stringify(updated));
-      setTransactionNotes({ ...notes });
-      return updated;
+    const indexSet = new Set(indices);
+    let notes = loadTransactionNotes();
+    const updated = transactions.map((item, idx) => {
+      if (!indexSet.has(idx)) return item;
+      const key = getTransactionNoteKey(item);
+      notes = saveTransactionNote(key, trimmed);
+      return { ...item, notes: trimmed || undefined };
     });
+    setTransactionNotes({ ...notes });
+    setTransactions(updated);
+    await saveTransactions(updated);
   };
 
   const handleStartNoteEdit = (transaction, originalIndex) => {
@@ -2184,21 +2235,21 @@ export default function DashboardPage() {
     });
   };
 
-  const handleApplyNotesRule = () => {
+  const handleApplyNotesRule = async () => {
     if (!notesRulePrompt) return;
     const { selectedIndices, newNotes, keyword } = notesRulePrompt;
     if (selectedIndices.length === 0) return;
-    persistNotesToIndices(selectedIndices, newNotes);
-    saveNotesRule(keyword, newNotes);
+    await persistNotesToIndices(selectedIndices, newNotes);
+    await saveNotesRule(keyword, newNotes);
     showToast(`✅ Notes diterapkan ke ${selectedIndices.length} transaksi`);
     setNotesRulePrompt(null);
   };
 
-  const handleApplyThisNoteOnly = () => {
+  const handleApplyThisNoteOnly = async () => {
     if (!notesRulePrompt) return;
     const { index, newNotes, keyword } = notesRulePrompt;
-    persistNotesToIndices([index], newNotes);
-    saveNotesRule(keyword, newNotes);
+    await persistNotesToIndices([index], newNotes);
+    await saveNotesRule(keyword, newNotes);
     setNotesRulePrompt(null);
   };
 
@@ -2206,22 +2257,22 @@ export default function DashboardPage() {
     setNotesRulePrompt(null);
   };
 
-  const openCategoryRulesModal = () => {
-    setSavedCategoryRules(loadCategoryRules());
-    setSavedNotesRules(loadNotesRules());
+  const openCategoryRulesModal = async () => {
+    setSavedCategoryRules(safeArray(await loadCategoryRules()));
+    setSavedNotesRules(safeArray(await loadNotesRules()));
     setRulesSettingsTab("category");
     setShowCategoryRulesModal(true);
   };
 
-  const handleDeleteCategoryRule = (keyword) => {
-    deleteCategoryRule(keyword);
-    setSavedCategoryRules(loadCategoryRules());
+  const handleDeleteCategoryRule = async (keyword) => {
+    await deleteCategoryRule(keyword);
+    setSavedCategoryRules(safeArray(await loadCategoryRules()));
     showToast("Aturan kategori dihapus");
   };
 
-  const handleDeleteNotesRule = (keyword) => {
-    deleteNotesRule(keyword);
-    setSavedNotesRules(loadNotesRules());
+  const handleDeleteNotesRule = async (keyword) => {
+    await deleteNotesRule(keyword);
+    setSavedNotesRules(safeArray(await loadNotesRules()));
     showToast("Aturan notes dihapus");
   };
 
@@ -2325,6 +2376,10 @@ export default function DashboardPage() {
     <div className="vale-page font-body relative min-h-screen">
       <Navbar />
 
+      {isLoading ? <DashboardLoadingSkeleton /> : null}
+
+      {!isLoading && (
+        <div>
       <main className="relative z-10 mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-12">
           <h1 className="font-serif-display text-3xl tracking-tight text-[#ECEEF2] md:text-4xl">
           Dashboard Transaksi
@@ -2383,7 +2438,7 @@ export default function DashboardPage() {
         </div>
 
         {showAccountEmptyState ? (
-          <>
+          <div>
             <div ref={quickActionsRef} className="mt-4 flex justify-center">
               <button
                 type="button"
@@ -2408,9 +2463,9 @@ export default function DashboardPage() {
                 analisa keuangan
               </p>
             </section>
-          </>
+          </div>
         ) : (
-          <>
+          <div>
         <div ref={quickActionsRef} className="mt-4 flex flex-wrap gap-2">
           <div className="relative">
             <button
@@ -2803,7 +2858,7 @@ export default function DashboardPage() {
             </table>
           </div>
         </section>
-          </>
+          </div>
         )}
       </main>
 
@@ -2836,7 +2891,7 @@ export default function DashboardPage() {
                         setSelectedAccountId(createdAccountSuccess.id);
                       }
                       closeCreateAccountModal();
-                      loadTransactionsAndInsights();
+                      void refreshDashboardData();
                     }}
                     className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
@@ -3670,6 +3725,8 @@ export default function DashboardPage() {
           💬
         </button>
       </div>
+        </div>
+      )}
     </div>
   );
 }

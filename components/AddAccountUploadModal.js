@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { getAccounts, saveAccount } from "../lib/accounts";
 import { loadCategoryRules } from "../lib/categoryRules";
 import { loadNotesRules } from "../lib/notesRules";
+import { safeArray } from "../lib/safeArray";
 import { syncNotesFromTransactions } from "../lib/transactionNotes";
 import { runTransactionMatching } from "../lib/transactionMatching";
 import { deduplicateTransactions } from "../lib/transactions";
+import {
+  getTransactions,
+  saveTransactions,
+} from "../lib/transactionsStore";
 import { addUploadHistoryEntry } from "../lib/uploadHistory";
 import PdfPasswordFields, {
   PDF_PASSWORD_UNSUPPORTED_CODE,
@@ -176,19 +181,24 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
     setPasswordError("");
   };
 
-  const handleStep1Continue = () => {
+  const handleStep1Continue = async () => {
     const nama = formNama.trim();
     if (!nama) {
       alert("Nama akun wajib diisi.");
       return;
     }
 
-    const newAccount = saveAccount({
+    const newAccount = await saveAccount({
       nama,
       tipe: formTipe,
       bank: formBank,
       warna: formWarna,
     });
+
+    if (!newAccount) {
+      alert("Gagal menyimpan akun.");
+      return;
+    }
 
     setCreatedAccount(newAccount);
     setStep(2);
@@ -211,10 +221,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
       formData.append("file", selectedFile);
       formData.append("accountId", createdAccount.id);
 
-      const categoryRules = loadCategoryRules();
+      const categoryRules = safeArray(await loadCategoryRules());
       formData.append("categoryRules", JSON.stringify(categoryRules));
 
-      const savedNotesRules = loadNotesRules();
+      const savedNotesRules = safeArray(await loadNotesRules());
       if (savedNotesRules.length > 0) {
         formData.append("notesRules", JSON.stringify(savedNotesRules));
       }
@@ -243,18 +253,16 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
       const result = await response.json();
       setUploadStage(2);
 
-      const newTransactions = result.transactions || [];
+      const newTransactions = safeArray(result.transactions);
 
-      const existing = JSON.parse(
-        localStorage.getItem("parsedTransactions") || "[]",
-      );
+      const existing = safeArray(await getTransactions());
       const { uniqueNew: uniqueNewTransactions, duplicateCount: dupCount } =
         deduplicateTransactions(existing, newTransactions);
 
       syncNotesFromTransactions(uniqueNewTransactions);
       const merged = [...existing, ...uniqueNewTransactions];
 
-      const accountList = getAccounts();
+      const accountList = safeArray(await getAccounts());
       const userName =
         typeof window !== "undefined"
           ? localStorage.getItem("valeProfileFullName") || ""
@@ -263,13 +271,10 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
         userName,
       });
 
-      localStorage.setItem(
-        "parsedTransactions",
-        JSON.stringify(matchResult.transactions),
-      );
+      await saveTransactions(matchResult.transactions);
       localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
 
-      addUploadHistoryEntry({
+      await addUploadHistoryEntry({
         accountId: createdAccount.id,
         fileName: selectedFile.name,
         transactions:

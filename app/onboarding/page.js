@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { saveAccount } from "../../lib/accounts";
+import { getAccounts } from "../../lib/accounts";
 import { loadCategoryRules } from "../../lib/categoryRules";
 import {
   BANK_OPTIONS,
@@ -17,10 +17,15 @@ import {
 } from "../../lib/onboardingConstants";
 import { loadNotesRules } from "../../lib/notesRules";
 import { completeOnboarding, getProfile } from "../../lib/profiles";
+import { safeArray } from "../../lib/safeArray";
 import { supabase } from "../../lib/supabase";
 import { syncNotesFromTransactions } from "../../lib/transactionNotes";
 import { runTransactionMatching } from "../../lib/transactionMatching";
 import { deduplicateTransactions } from "../../lib/transactions";
+import {
+  getTransactions,
+  saveTransactions,
+} from "../../lib/transactionsStore";
 import { addUploadHistoryEntry } from "../../lib/uploadHistory";
 
 const inputClass =
@@ -188,8 +193,11 @@ export default function OnboardingPage() {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("accountId", accountId);
-    formData.append("categoryRules", JSON.stringify(loadCategoryRules()));
-    const savedNotesRules = loadNotesRules();
+    formData.append(
+      "categoryRules",
+      JSON.stringify(safeArray(await loadCategoryRules())),
+    );
+    const savedNotesRules = safeArray(await loadNotesRules());
     if (savedNotesRules.length > 0) {
       formData.append("notesRules", JSON.stringify(savedNotesRules));
     }
@@ -205,10 +213,8 @@ export default function OnboardingPage() {
     }
 
     const result = await response.json();
-    const newTransactions = result.transactions || [];
-    const existing = JSON.parse(
-      localStorage.getItem("parsedTransactions") || "[]",
-    );
+    const newTransactions = safeArray(result.transactions);
+    const existing = safeArray(await getTransactions());
     const { uniqueNew: uniqueNewTransactions } = deduplicateTransactions(
       existing,
       newTransactions,
@@ -216,18 +222,15 @@ export default function OnboardingPage() {
 
     syncNotesFromTransactions(uniqueNewTransactions);
     const merged = [...existing, ...uniqueNewTransactions];
-    const accountList = JSON.parse(localStorage.getItem("accounts") || "[]");
+    const accountList = safeArray(await getAccounts());
     const matchResult = runTransactionMatching(merged, accountList, {
       userName: fullName.trim(),
     });
 
-    localStorage.setItem(
-      "parsedTransactions",
-      JSON.stringify(matchResult.transactions),
-    );
+    await saveTransactions(matchResult.transactions);
     localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
 
-    addUploadHistoryEntry({
+    await addUploadHistoryEntry({
       accountId,
       fileName: file.name,
       transactions:
@@ -292,14 +295,6 @@ export default function OnboardingPage() {
             "Gagal menyimpan profil. Pastikan tabel profiles dan accounts sudah dibuat di Supabase.",
         );
       }
-
-      saveAccount({
-        id: accountId,
-        nama: accountName.trim(),
-        tipe: "bank",
-        bank: selectedBank,
-        warna: selectedColor,
-      });
 
       if (withUpload && selectedFile) {
         await persistStatementUpload(accountId, selectedFile);

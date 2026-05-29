@@ -314,7 +314,7 @@ Jangan return apapun selain JSON.`
     }
 
     const { transactions: transactionsWithRules, appliedCount } =
-      applyCategoryRulesWithCount(processedTransactions, categoryRules)
+      await applyCategoryRulesWithCount(processedTransactions, categoryRules)
 
     let notesRules = []
     try {
@@ -328,7 +328,7 @@ Jangan return apapun selain JSON.`
     }
 
     const { transactions: transactionsWithNotes, appliedCount: notesAppliedCount } =
-      applyNotesRulesWithCount(transactionsWithRules, notesRules)
+      await applyNotesRulesWithCount(transactionsWithRules, notesRules)
 
     const summary = buildSummary(transactionsWithNotes)
     console.log("Summary for insights:", summary)

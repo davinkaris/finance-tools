@@ -10,6 +10,13 @@ import {
   saveAccount,
   updateAccount,
 } from "../../lib/accounts";
+import { safeArray } from "../../lib/safeArray";
+import {
+  deleteTransactionsByAccount,
+  deleteTransactionsByUpload,
+  getTransactions,
+  saveTransactions,
+} from "../../lib/transactionsStore";
 import {
   addUploadHistoryEntry,
   deleteUploadHistoryEntry,
@@ -18,7 +25,6 @@ import {
   groupUnlinkedTransactionsByPeriod,
   isTransactionInUnlinkedGroup,
   removeTransactionsForUploadEntry,
-  syncLegacyTransactionsAndHistory,
 } from "../../lib/uploadHistory";
 
 const BANK_OPTIONS = [
@@ -81,24 +87,21 @@ export default function AccountsPage() {
     setTimeout(() => setToastMessage(""), 3000);
   };
 
-  const refreshData = () => {
-    if (typeof window !== "undefined") {
-      syncLegacyTransactionsAndHistory();
-    }
+  const refreshData = async () => {
+    const [accountsData, uploadHistoryData, transactionsData] =
+      await Promise.all([
+        getAccounts(),
+        getUploadHistory(),
+        getTransactions(),
+      ]);
 
-    setAccounts(getAccounts());
-    setUploadHistory(getUploadHistory());
-    try {
-      const raw = localStorage.getItem("parsedTransactions");
-      const parsed = raw ? JSON.parse(raw) : [];
-      setTransactions(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      setTransactions([]);
-    }
+    setAccounts(safeArray(accountsData));
+    setUploadHistory(safeArray(uploadHistoryData));
+    setTransactions(safeArray(transactionsData));
   };
 
   useEffect(() => {
-    refreshData();
+    void refreshData();
   }, []);
 
   const uploadHistoryByAccount = useMemo(() => {
@@ -126,15 +129,18 @@ export default function AccountsPage() {
     setDeleteUploadConfirm({ entry, count });
   };
 
-  const handleConfirmDeleteUpload = () => {
+  const handleConfirmDeleteUpload = async () => {
     if (!deleteUploadConfirm) return;
 
     const { entry } = deleteUploadConfirm;
-    const remaining = removeTransactionsForUploadEntry(entry, transactions);
-    localStorage.setItem("parsedTransactions", JSON.stringify(remaining));
-    deleteUploadHistoryEntry(entry.id);
+    await deleteTransactionsByUpload(
+      entry.accountId,
+      entry.dateRangeStart,
+      entry.dateRangeEnd,
+    );
+    await deleteUploadHistoryEntry(entry.id);
     setDeleteUploadConfirm(null);
-    refreshData();
+    await refreshData();
   };
 
   const transactionCountByAccount = useMemo(() => {
@@ -161,7 +167,7 @@ export default function AccountsPage() {
     setLinkAccountId(accounts[0]?.id || "");
   };
 
-  const handleConfirmLinkUnlinked = () => {
+  const handleConfirmLinkUnlinked = async () => {
     if (!linkModalGroup || !linkAccountId) {
       alert("Pilih akun dulu.");
       return;
@@ -181,8 +187,8 @@ export default function AccountsPage() {
       accountId: linkAccountId,
     }));
 
-    localStorage.setItem("parsedTransactions", JSON.stringify(updated));
-    addUploadHistoryEntry({
+    await saveTransactions(updated);
+    await addUploadHistoryEntry({
       accountId: linkAccountId,
       fileName: "Statement (tidak tertaut)",
       transactions: linkedTransactions,
@@ -191,13 +197,13 @@ export default function AccountsPage() {
 
     setLinkModalGroup(null);
     setLinkAccountId("");
-    refreshData();
+    await refreshData();
     showToast(
       `✅ ${count} transaksi berhasil ditautkan ke ${account?.nama || "akun"}`,
     );
   };
 
-  const handleConfirmDeleteUnlinked = () => {
+  const handleConfirmDeleteUnlinked = async () => {
     if (!deleteUnlinkedConfirm) return;
 
     const count = deleteUnlinkedConfirm.transactionCount;
@@ -206,9 +212,9 @@ export default function AccountsPage() {
         !isTransactionInUnlinkedGroup(transaction, deleteUnlinkedConfirm),
     );
 
-    localStorage.setItem("parsedTransactions", JSON.stringify(remaining));
+    await saveTransactions(remaining);
     setDeleteUnlinkedConfirm(null);
-    refreshData();
+    await refreshData();
     showToast(`🗑️ ${count} transaksi dihapus`);
   };
 
@@ -243,7 +249,7 @@ export default function AccountsPage() {
     setFormBank(tipe === "cc" ? CC_OPTIONS[0] : BANK_OPTIONS[0]);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const nama = formNama.trim();
     if (!nama) {
       alert("Nama akun wajib diisi.");
@@ -255,25 +261,30 @@ export default function AccountsPage() {
     }
 
     if (editingAccount) {
-      updateAccount(editingAccount.id, {
+      await updateAccount(editingAccount.id, {
         nama,
         tipe: formTipe,
         bank: formBank,
         warna: formWarna,
       });
-      refreshData();
+      await refreshData();
       closeModal();
       return;
     }
 
-    const newAccount = saveAccount({
+    const newAccount = await saveAccount({
       nama,
       tipe: formTipe,
       bank: formBank,
       warna: formWarna,
     });
 
-    refreshData();
+    if (!newAccount) {
+      alert("Gagal menyimpan akun.");
+      return;
+    }
+
+    await refreshData();
     setCreatedAccountSuccess({
       id: newAccount.id,
       nama: newAccount.nama,
@@ -285,29 +296,25 @@ export default function AccountsPage() {
     router.push(`/upload?accountId=${createdAccountSuccess.id}`);
   };
 
-  const handleDeleteClick = (account) => {
+  const handleDeleteClick = async (account) => {
     const count = transactionCountByAccount[account.id] || 0;
     if (count > 0) {
       setDeleteConfirm({ account, count });
       return;
     }
 
-    deleteAccount(account.id);
-    refreshData();
+    await deleteAccount(account.id);
+    await refreshData();
   };
 
-  const handleConfirmDeleteAll = () => {
+  const handleConfirmDeleteAll = async () => {
     if (!deleteConfirm) return;
 
     const accountId = deleteConfirm.account.id;
-    deleteAccount(accountId);
-
-    const remaining = transactions.filter(
-      (transaction) => transaction.accountId !== accountId,
-    );
-    localStorage.setItem("parsedTransactions", JSON.stringify(remaining));
+    await deleteTransactionsByAccount(accountId);
+    await deleteAccount(accountId);
     setDeleteConfirm(null);
-    refreshData();
+    await refreshData();
   };
 
   return (

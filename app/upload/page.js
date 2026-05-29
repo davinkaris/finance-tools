@@ -5,11 +5,16 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import { getAccounts, saveAccount } from "../../lib/accounts";
+import { safeArray } from "../../lib/safeArray";
 import { loadCategoryRules } from "../../lib/categoryRules";
 import { loadNotesRules } from "../../lib/notesRules";
 import { syncNotesFromTransactions } from "../../lib/transactionNotes";
 import { runTransactionMatching } from "../../lib/transactionMatching";
 import { deduplicateTransactions } from "../../lib/transactions";
+import {
+  getTransactions,
+  saveTransactions,
+} from "../../lib/transactionsStore";
 import { addUploadHistoryEntry } from "../../lib/uploadHistory";
 
 const STAGES = [
@@ -97,6 +102,11 @@ function isPasswordRelatedError(message) {
   );
 }
 
+async function fetchAccountsArray() {
+  const loadedAccounts = await getAccounts();
+  return safeArray(loadedAccounts);
+}
+
 export default function UploadPage() {
   return (
     <Suspense
@@ -135,26 +145,37 @@ function UploadPageContent() {
   const suggestBank = searchParams.get("suggestBank")?.trim() || "";
 
   useEffect(() => {
-    const loadedAccounts = getAccounts();
-    setAccounts(loadedAccounts);
+    let mounted = true;
 
-    if (
-      preselectedAccountId &&
-      loadedAccounts.some((account) => account.id === preselectedAccountId)
-    ) {
-      setSelectedAccountId(preselectedAccountId);
-      return;
-    }
+    const loadAccounts = async () => {
+      const accountsArray = await fetchAccountsArray();
+      if (!mounted) return;
 
-    if (!suggestBank) return;
+      setAccounts(accountsArray);
 
-    const existingForBank = loadedAccounts.find((account) =>
-      accountMatchesBank(account, suggestBank),
-    );
-    if (existingForBank) {
-      setCreatedFromSuggestionId(null);
-      setSelectedAccountId(existingForBank.id);
-    }
+      if (
+        preselectedAccountId &&
+        accountsArray.some((account) => account.id === preselectedAccountId)
+      ) {
+        setSelectedAccountId(preselectedAccountId);
+        return;
+      }
+
+      if (!suggestBank) return;
+
+      const existingForBank = accountsArray.find((account) =>
+        accountMatchesBank(account, suggestBank),
+      );
+      if (existingForBank) {
+        setCreatedFromSuggestionId(null);
+        setSelectedAccountId(existingForBank.id);
+      }
+    };
+
+    loadAccounts();
+    return () => {
+      mounted = false;
+    };
   }, [preselectedAccountId, suggestBank]);
 
   const preExistingBankAccount = accounts.find((account) =>
@@ -255,7 +276,7 @@ function UploadPageContent() {
     setUploadError(null);
   };
 
-  const handleSelectSuggestedCard = () => {
+  const handleSelectSuggestedCard = async () => {
     if (isLoading) return;
 
     if (createdFromSuggestionId) {
@@ -263,9 +284,13 @@ function UploadPageContent() {
       return;
     }
 
-    const newAccount = saveAccount(buildSuggestedAccountData(suggestBank, accounts));
+    const newAccount = await saveAccount(
+      buildSuggestedAccountData(suggestBank, accounts),
+    );
+    if (!newAccount) return;
+
     setCreatedFromSuggestionId(newAccount.id);
-    setAccounts(getAccounts());
+    setAccounts(await fetchAccountsArray());
     setSelectedAccountId(newAccount.id);
   };
 
@@ -297,7 +322,7 @@ function UploadPageContent() {
     resetCreateAccountForm();
   };
 
-  const handleCreateAndSelectAccount = () => {
+  const handleCreateAndSelectAccount = async () => {
     const nama = newAccountNama.trim();
     if (!nama) {
       setCreateAccountError("Nama akun wajib diisi.");
@@ -308,14 +333,19 @@ function UploadPageContent() {
       return;
     }
 
-    const newAccount = saveAccount({
+    const newAccount = await saveAccount({
       nama,
       tipe: "bank",
       bank: newAccountBank,
       warna: newAccountWarna,
     });
 
-    setAccounts(getAccounts());
+    if (!newAccount) {
+      setCreateAccountError("Gagal menyimpan akun.");
+      return;
+    }
+
+    setAccounts(await fetchAccountsArray());
     setSelectedAccountId(newAccount.id);
     setCreatedFromSuggestionId(null);
     setShowCreateAccountForm(false);
@@ -468,9 +498,9 @@ function UploadPageContent() {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("accountId", selectedAccountId);
-      const categoryRules = loadCategoryRules();
+      const categoryRules = safeArray(await loadCategoryRules());
       formData.append("categoryRules", JSON.stringify(categoryRules));
-      const savedNotesRules = loadNotesRules();
+      const savedNotesRules = safeArray(await loadNotesRules());
       if (savedNotesRules.length > 0) {
         formData.append("notesRules", JSON.stringify(savedNotesRules));
       }
@@ -496,26 +526,24 @@ function UploadPageContent() {
       if (typeof window !== "undefined") {
         const newTransactions = result.transactions || [];
 
-        const existing = JSON.parse(
-          localStorage.getItem("parsedTransactions") || "[]",
-        );
+        const existing = safeArray(await getTransactions());
         const { uniqueNew: uniqueNewTransactions, duplicateCount } =
           deduplicateTransactions(existing, newTransactions);
 
         syncNotesFromTransactions(uniqueNewTransactions);
         const merged = [...existing, ...uniqueNewTransactions];
 
-        const accountList = getAccounts();
+        const accountsArray = await fetchAccountsArray();
 
         if (
           createdFromSuggestionId &&
-          !accountList.some((account) => account.id === createdFromSuggestionId)
+          !accountsArray.some((account) => account.id === createdFromSuggestionId)
         ) {
           const suggested = accounts.find(
             (account) => account.id === createdFromSuggestionId,
           );
           if (suggested) {
-            saveAccount(suggested);
+            await saveAccount(suggested);
           }
         }
 
@@ -523,20 +551,17 @@ function UploadPageContent() {
           typeof window !== "undefined"
             ? localStorage.getItem("valeProfileFullName") || ""
             : "";
-        const matchResult = runTransactionMatching(merged, getAccounts(), {
+        const matchResult = runTransactionMatching(merged, accountsArray, {
           userName,
         });
 
-        localStorage.setItem(
-          "parsedTransactions",
-          JSON.stringify(matchResult.transactions),
-        );
+        await saveTransactions(matchResult.transactions);
         localStorage.setItem(
           "aiInsights",
           JSON.stringify(result.insights || []),
         );
 
-        addUploadHistoryEntry({
+        await addUploadHistoryEntry({
           accountId: selectedAccountId,
           fileName: selectedFile.name,
           transactions:
