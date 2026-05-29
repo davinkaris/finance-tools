@@ -153,12 +153,20 @@ export default function Home() {
           >
             Vale
           </Link>
-          <Link
-            href="/upload"
-            className="btn-gradient rounded-full px-5 py-2.5 text-sm font-semibold text-white"
-          >
-            Mulai Gratis →
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/auth"
+              className="rounded-full px-4 py-2 text-sm font-medium text-[#94A3B8] transition hover:text-[#F8FAFC]"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/auth"
+              className="btn-gradient rounded-full px-5 py-2.5 text-sm font-semibold text-white"
+            >
+              Mulai Gratis →
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -186,7 +194,7 @@ export default function Home() {
 
             <div className="reveal reveal-delay-3 mt-10 flex flex-wrap items-center gap-4">
               <Link
-                href="/upload"
+                href="/auth"
                 className="btn-gradient rounded-full px-7 py-3.5 text-sm font-semibold text-white"
               >
                 Mulai Gratis — Gratis
@@ -425,7 +433,7 @@ export default function Home() {
                 kendali penuh di tangan kamu.
               </p>
               <Link
-                href="/upload"
+                href="/auth"
                 className="mt-8 inline-flex items-center rounded-full bg-white px-10 py-4 text-sm font-semibold text-[#050A18] transition hover:bg-white/90 hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]"
               >
                 Mulai Gratis Sekarang

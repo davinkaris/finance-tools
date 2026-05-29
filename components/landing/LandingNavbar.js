@@ -28,12 +28,20 @@ export default function LandingNavbar() {
         >
           Vale
         </Link>
-        <Link
-          href="/upload"
-          className="vale-btn-shimmer relative overflow-hidden rounded-full border border-[#10b981]/40 bg-[#10b981]/10 px-5 py-2 text-sm font-medium text-[#10b981] transition hover:border-[#10b981] hover:bg-[#10b981]/20"
-        >
-          Mulai Gratis
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/auth"
+            className="rounded-full px-4 py-2 text-sm font-medium text-[#94A3B8] transition hover:text-white"
+          >
+            Masuk
+          </Link>
+          <Link
+            href="/auth"
+            className="vale-btn-shimmer relative overflow-hidden rounded-full border border-[#10b981]/40 bg-[#10b981]/10 px-5 py-2 text-sm font-medium text-[#10b981] transition hover:border-[#10b981] hover:bg-[#10b981]/20"
+          >
+            Mulai Gratis
+          </Link>
+        </div>
       </nav>
     </header>
   );

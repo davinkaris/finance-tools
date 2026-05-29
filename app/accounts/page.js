@@ -370,101 +370,124 @@ export default function AccountsPage() {
             {accounts.map((account) => {
               const txCount = transactionCountByAccount[account.id] || 0;
               const accountUploads = uploadHistoryByAccount[account.id] || [];
+              const hasStatement = txCount > 0;
 
               return (
                 <div
                   key={account.id}
                   className="vale-card vale-card-hover flex flex-col rounded-2xl p-5"
                 >
-                  <div className="flex items-start gap-4">
-                    <span
-                      className="mt-1 h-4 w-4 shrink-0 rounded-full"
-                      style={{ backgroundColor: account.warna }}
-                      aria-hidden="true"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-lg font-bold text-[#ECEEF2]">
-                        {account.nama}
-                      </p>
-                      <span className="mt-2 inline-flex rounded-full bg-[#20242E] px-3 py-1 text-xs font-semibold text-[#8B92A5]">
-                        {account.tipe === "cc" ? "💳 Credit Card" : "🏦 Bank Account"}
-                      </span>
-                      <p className="mt-2 text-sm text-[#8B92A5]">{account.bank}</p>
-                      <p className="mt-1 text-sm text-[#8B92A5]">
-                        {txCount} transaksi
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(account)}
-                        className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-[#20242E]"
-                        aria-label={`Edit ${account.nama}`}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteClick(account)}
-                        className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-red-500/10"
-                        aria-label={`Hapus ${account.nama}`}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 border-t border-white/[0.06] pt-4">
-                    <p className="text-sm font-semibold text-[#63B3ED]">
-                      📁 Statement Terupload
-                    </p>
-                    {accountUploads.length === 0 ? (
-                      <p className="mt-2 text-sm text-[#8B92A5]">
-                        Belum ada statement diupload
-                      </p>
-                    ) : (
-                      <ul className="mt-3 space-y-2">
-                        {accountUploads.map((entry) => (
-                          <li
-                            key={entry.id}
-                            className="flex items-start gap-2 rounded-xl bg-[#1A1D25]/[0.04] px-3 py-2.5"
+                  {hasStatement ? (
+                    <>
+                      <div className="flex items-start gap-4">
+                        <span
+                          className="mt-1 h-4 w-4 shrink-0 rounded-full"
+                          style={{ backgroundColor: account.warna }}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-lg font-bold text-[#ECEEF2]">
+                            {account.nama}
+                          </p>
+                          <span className="mt-2 inline-flex rounded-full bg-[#20242E] px-3 py-1 text-xs font-semibold text-[#8B92A5]">
+                            {account.tipe === "cc" ? "💳 Credit Card" : "🏦 Bank Account"}
+                          </span>
+                          <p className="mt-2 text-sm text-[#8B92A5]">{account.bank}</p>
+                          <p className="mt-1 text-sm text-[#8B92A5]">
+                            {txCount} transaksi
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(account)}
+                            className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-[#20242E]"
+                            aria-label={`Edit ${account.nama}`}
                           >
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-[#ECEEF2]">
-                                {entry.fileName}
-                              </p>
-                              <p className="mt-0.5 text-xs text-[#8B92A5]">
-                                {formatUploadDate(entry.uploadedAt)} ·{" "}
-                                {entry.transactionCount} transaksi ·{" "}
-                                {entry.dateRange}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteUploadClick(entry)}
-                              className="shrink-0 rounded-full border border-[rgba(255,255,255,0.08)] px-2 py-1 text-sm transition hover:bg-red-500/10"
-                              aria-label={`Hapus ${entry.fileName}`}
-                            >
-                              🗑️
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                            ✏️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClick(account)}
+                            className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-red-500/10"
+                            aria-label={`Hapus ${account.nama}`}
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
 
-                  {txCount === 0 ? (
-                    <Link
-                      href={`/upload?accountId=${account.id}`}
-                      className="mt-4 inline-flex w-full items-center justify-center rounded-full border-2 px-4 py-2.5 text-sm font-semibold transition hover:bg-black/[0.03]"
-                      style={{
-                        borderColor: account.warna || "#63B3ED",
-                        color: account.warna || "#63B3ED",
-                      }}
-                    >
-                      📄 Upload Statement
-                    </Link>
-                  ) : null}
+                      <div className="mt-4 border-t border-white/[0.06] pt-4">
+                        <p className="text-sm font-semibold text-[#63B3ED]">
+                          📁 Statement Terupload
+                        </p>
+                        {accountUploads.length === 0 ? (
+                          <p className="mt-2 text-sm text-[#8B92A5]">
+                            Belum ada statement diupload
+                          </p>
+                        ) : (
+                          <ul className="mt-3 space-y-2">
+                            {accountUploads.map((entry) => (
+                              <li
+                                key={entry.id}
+                                className="flex items-start gap-2 rounded-xl bg-[#1A1D25]/[0.04] px-3 py-2.5"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-[#ECEEF2]">
+                                    {entry.fileName}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-[#8B92A5]">
+                                    {formatUploadDate(entry.uploadedAt)} ·{" "}
+                                    {entry.transactionCount} transaksi ·{" "}
+                                    {entry.dateRange}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUploadClick(entry)}
+                                  className="shrink-0 rounded-full border border-[rgba(255,255,255,0.08)] px-2 py-1 text-sm transition hover:bg-red-500/10"
+                                  aria-label={`Hapus ${entry.fileName}`}
+                                >
+                                  🗑️
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <Link
+                        href={`/upload?accountId=${account.id}`}
+                        className="mt-4 self-end rounded-full border border-[rgba(99,179,237,0.3)] px-3 py-1.5 text-xs font-semibold text-[#63B3ED] transition hover:bg-[rgba(99,179,237,0.06)]"
+                      >
+                        ＋ Upload Statement
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="truncate text-lg font-bold text-[#ECEEF2]">
+                          {account.nama}
+                        </p>
+                        <p className="mt-1 text-sm text-[#8B92A5]">{account.bank}</p>
+                      </div>
+
+                      <div className="mt-5 flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-[rgba(255,255,255,0.12)] bg-[rgba(99,179,237,0.04)] px-6 py-10 text-center">
+                        <p className="text-base font-semibold text-[#ECEEF2]">
+                          📄 Belum ada statement
+                        </p>
+                        <p className="mt-2 max-w-xs text-sm leading-relaxed text-[#8B92A5]">
+                          Upload statement pertama kamu untuk mulai analisa keuangan
+                        </p>
+                        <Link
+                          href={`/upload?accountId=${account.id}`}
+                          className="btn-primary mt-6 inline-flex items-center rounded-full px-6 py-3 text-sm font-semibold transition"
+                        >
+                          Upload Statement →
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}

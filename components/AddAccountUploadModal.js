@@ -5,10 +5,7 @@ import { getAccounts, saveAccount } from "../lib/accounts";
 import { loadCategoryRules } from "../lib/categoryRules";
 import { loadNotesRules } from "../lib/notesRules";
 import { syncNotesFromTransactions } from "../lib/transactionNotes";
-import {
-  detectMoveMoney,
-  detectPayBill,
-} from "../lib/transactionMatching";
+import { runTransactionMatching } from "../lib/transactionMatching";
 import { deduplicateTransactions } from "../lib/transactions";
 import { addUploadHistoryEntry } from "../lib/uploadHistory";
 import PdfPasswordFields, {
@@ -258,12 +255,17 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
       const merged = [...existing, ...uniqueNewTransactions];
 
       const accountList = getAccounts();
-      const moveResult = detectMoveMoney(merged, accountList);
-      const billResult = detectPayBill(moveResult.transactions, accountList);
+      const userName =
+        typeof window !== "undefined"
+          ? localStorage.getItem("valeProfileFullName") || ""
+          : "";
+      const matchResult = runTransactionMatching(merged, accountList, {
+        userName,
+      });
 
       localStorage.setItem(
         "parsedTransactions",
-        JSON.stringify(billResult.transactions),
+        JSON.stringify(matchResult.transactions),
       );
       localStorage.setItem("aiInsights", JSON.stringify(result.insights || []));
 

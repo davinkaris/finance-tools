@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart,
@@ -38,8 +40,20 @@ import {
   inferJenisFromAmounts,
   processTransactions,
 } from "../../lib/transactionJenis";
-import { normalizeTransactions } from "../../lib/transactions";
-import { getAccounts } from "../../lib/accounts";
+import { normalizeTransactions, shouldExcludeFromSpending } from "../../lib/transactions";
+import {
+  removeMoveMoneyMatch,
+  runTransactionMatching,
+} from "../../lib/transactionMatching";
+import { getAccounts, saveAccount } from "../../lib/accounts";
+import { getProfile } from "../../lib/profiles";
+import { supabase } from "../../lib/supabase";
+import {
+  deleteUploadHistoryEntry,
+  getUploadHistory,
+  removeTransactionsForUploadEntry,
+  syncLegacyTransactionsAndHistory,
+} from "../../lib/uploadHistory";
 import Navbar from "../../components/Navbar";
 import AddAccountUploadModal from "../../components/AddAccountUploadModal";
 
@@ -60,6 +74,18 @@ const formatAmount = (transaksi) => {
   const kredit = parseAmount(transaksi?.kredit);
   const debit = parseAmount(transaksi?.debit);
   const amount = kredit > 0 ? kredit : debit;
+
+  if (transaksi?.matchType === "move_money") {
+    if (amount === 0) {
+      return { text: "-", className: "whitespace-nowrap text-[#8B92A5]" };
+    }
+    const formatted = new Intl.NumberFormat("id-ID").format(amount);
+    const prefix = kredit > 0 ? "+" : "-";
+    return {
+      text: `${prefix}Rp ${formatted}`,
+      className: "whitespace-nowrap font-semibold text-[#8B92A5]",
+    };
+  }
 
   if (amount === 0) {
     return { text: "-", className: "whitespace-nowrap text-[#8B92A5]" };
@@ -247,6 +273,163 @@ const INSIGHT_VARIANTS = [
   "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#68D391] bg-[rgba(104,211,145,0.05)]",
   "rounded-xl border border-[rgba(255,255,255,0.08)] border-l-[3px] border-l-[#F6AD55] bg-[rgba(246,173,85,0.05)]",
 ];
+
+const AI_INSIGHT_COLLAPSED_KEY = "valeAiInsightCollapsed";
+
+const BANK_OPTIONS = [
+  "Jago",
+  "BCA",
+  "Mandiri",
+  "BRI",
+  "BNI",
+  "CIMB",
+  "OCBC",
+  "Permata",
+  "Danamon",
+  "Lainnya",
+];
+
+const CC_OPTIONS = [
+  "BCA CC",
+  "Mandiri CC",
+  "UOB CC",
+  "CIMB CC",
+  "HSBC CC",
+  "Citibank CC",
+  "Lainnya",
+];
+
+const COLOR_OPTIONS = [
+  "#10b981",
+  "#3b82f6",
+  "#f97316",
+  "#ec4899",
+  "#8b5cf6",
+  "#eab308",
+  "#ef4444",
+  "#63B3ED",
+];
+
+const QUICK_ACTION_BUTTON_CLASS =
+  "inline-flex items-center gap-2 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-2 text-[13px] font-semibold text-[#ECEEF2] transition hover:border-[rgba(99,179,237,0.3)] hover:bg-[rgba(99,179,237,0.1)]";
+
+const PERMANENTLY_DISMISSED_KEY = "permanentlyDismissed";
+const PROFILE_FULL_NAME_KEY = "valeProfileFullName";
+
+const SUGGESTION_BANKS = [
+  "BCA",
+  "Mandiri",
+  "BRI",
+  "BNI",
+  "CIMB",
+  "Jago",
+  "OCBC",
+  "Permata",
+  "Danamon",
+  "BSI",
+  "GoPay",
+  "OVO",
+  "Dana",
+];
+
+const fuzzyMatchName = (text, name) => {
+  const words = name.toLowerCase().split(" ");
+  return words.some((word) => {
+    if (word.length < 4) return false;
+    const prefix = word.slice(0, 4);
+    return text.toLowerCase().includes(prefix);
+  });
+};
+
+const isTransferTransaction = (transaction) => {
+  const kategori = normalizeKategori(transaction?.kategori);
+  if (kategori === "Transfer") return true;
+  const deskripsi = String(transaction?.deskripsi || "").toLowerCase();
+  return /transfer|kirim|outgoing/.test(deskripsi);
+};
+
+const detectBanksInText = (text) => {
+  const lower = String(text || "").toLowerCase();
+  return SUGGESTION_BANKS.filter((bank) => lower.includes(bank.toLowerCase()));
+};
+
+const accountHasBank = (accounts, bankName) => {
+  const target = bankName.toLowerCase();
+  return accounts.some((account) => {
+    const bank = String(account.bank || "").toLowerCase();
+    return bank.includes(target) || target.includes(bank);
+  });
+};
+
+const accountHasBankWithTransactions = (accounts, bankName, transactions) => {
+  const target = bankName.toLowerCase();
+  const matchingAccountIds = accounts
+    .filter((account) => {
+      const bank = String(account.bank || "").toLowerCase();
+      return bank.includes(target) || target.includes(bank);
+    })
+    .map((account) => account.id);
+
+  if (matchingAccountIds.length === 0) return false;
+
+  return (Array.isArray(transactions) ? transactions : []).some(
+    (transaction) =>
+      transaction?.accountId &&
+      matchingAccountIds.includes(transaction.accountId),
+  );
+};
+
+const computeSmartStatementSuggestions = (
+  transactions,
+  accounts,
+  userName,
+  permanentlyDismissedBanks,
+) => {
+  if (!userName?.trim()) return [];
+
+  const permanentlyDismissedSet = new Set(permanentlyDismissedBanks || []);
+  const bankTransactions = new Map();
+  const displayName = userName.trim();
+
+  (Array.isArray(transactions) ? transactions : []).forEach((transaction) => {
+    if (!isTransferTransaction(transaction)) return;
+
+    const deskripsi = String(transaction?.deskripsi || "");
+    if (!fuzzyMatchName(deskripsi, userName)) return;
+
+    detectBanksInText(deskripsi).forEach((bank) => {
+      if (permanentlyDismissedSet.has(bank)) return;
+      if (accountHasBankWithTransactions(accounts, bank, transactions)) return;
+
+      if (!bankTransactions.has(bank)) {
+        bankTransactions.set(bank, []);
+      }
+      bankTransactions.get(bank).push(transaction);
+    });
+  });
+
+  return Array.from(bankTransactions.entries()).map(([bank, matchedTransactions]) => ({
+    bank,
+    userName: displayName,
+    transactions: matchedTransactions,
+  }));
+};
+
+const loadPermanentlyDismissed = () => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(PERMANENTLY_DISMISSED_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const persistPermanentlyDismissed = (banks) => {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(PERMANENTLY_DISMISSED_KEY, JSON.stringify(banks));
+};
 
 const StackedBarTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -439,6 +622,7 @@ function TransactionNoteCell({
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState([]);
   const [insights, setInsights] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
@@ -446,6 +630,20 @@ export default function DashboardPage() {
   const [selectedBulan, setSelectedBulan] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [showCreateAccountModal, setShowCreateAccountModal] = useState(false);
+  const [createdAccountSuccess, setCreatedAccountSuccess] = useState(null);
+  const [formNama, setFormNama] = useState("");
+  const [formTipe, setFormTipe] = useState("bank");
+  const [formBank, setFormBank] = useState(BANK_OPTIONS[0]);
+  const [formWarna, setFormWarna] = useState("#63B3ED");
+  const [uploadHistory, setUploadHistory] = useState([]);
+  const [deleteUploadConfirm, setDeleteUploadConfirm] = useState(null);
+  const [quickActionDropdown, setQuickActionDropdown] = useState(null);
+  const [aiInsightExpanded, setAiInsightExpanded] = useState(false);
+  const [userFullName, setUserFullName] = useState("");
+  const [permanentlyDismissed, setPermanentlyDismissed] = useState([]);
+  const [confirmDismissBank, setConfirmDismissBank] = useState(null);
+  const [expandedSuggestions, setExpandedSuggestions] = useState(() => new Set());
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [editingCategoryName, setEditingCategoryName] = useState("");
@@ -481,9 +679,39 @@ export default function DashboardPage() {
   const chatEndRef = useRef(null);
   const noteInputRef = useRef(null);
   const noteEditorRef = useRef(null);
+  const quickActionsRef = useRef(null);
+
+  const bankOptions = formTipe === "cc" ? CC_OPTIONS : BANK_OPTIONS;
+
+  const applyTransactionMatching = (transactionList, userName = "") => {
+    const resolvedName =
+      userName ||
+      userFullName ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem(PROFILE_FULL_NAME_KEY) || ""
+        : "");
+    const accountList = getAccounts();
+    const result = runTransactionMatching(transactionList, accountList, {
+      userName: resolvedName,
+    });
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem(
+        "parsedTransactions",
+        JSON.stringify(result.transactions),
+      );
+    }
+
+    return result.transactions;
+  };
 
   const loadTransactionsAndInsights = () => {
+    if (typeof window !== "undefined") {
+      syncLegacyTransactionsAndHistory();
+    }
+
     setAccounts(getAccounts());
+    setUploadHistory(getUploadHistory());
 
     const raw = localStorage.getItem("parsedTransactions");
     const rawInsights = localStorage.getItem("aiInsights");
@@ -521,7 +749,9 @@ export default function DashboardPage() {
           const withNotes = applyNotesRules(withCategories);
           const mergedNotes = syncNotesFromTransactions(withNotes);
           setTransactionNotes(mergedNotes);
-          setTransactions(normalizeTransactions(withNotes));
+          setTransactions(
+            applyTransactionMatching(normalizeTransactions(withNotes)),
+          );
         }
       } catch {
         setTransactions([]);
@@ -564,7 +794,94 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadTransactionsAndInsights();
+    setPermanentlyDismissed(loadPermanentlyDismissed());
+    try {
+      const stored = localStorage.getItem(AI_INSIGHT_COLLAPSED_KEY);
+      if (stored === "expanded") {
+        setAiInsightExpanded(true);
+      }
+    } catch {
+      // ignore invalid preference
+    }
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUserFullName = async () => {
+      try {
+        const cached = localStorage.getItem(PROFILE_FULL_NAME_KEY);
+        if (cached?.trim()) {
+          if (mounted) setUserFullName(cached.trim());
+          return;
+        }
+      } catch {
+        // ignore cache read errors
+      }
+
+      try {
+        const profile = await getProfile();
+        if (profile?.full_name?.trim()) {
+          const name = profile.full_name.trim();
+          localStorage.setItem(PROFILE_FULL_NAME_KEY, name);
+          if (mounted) setUserFullName(name);
+          return;
+        }
+      } catch {
+        // ignore profile fetch errors
+      }
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const metaName = user?.user_metadata?.full_name;
+        if (metaName?.trim()) {
+          const name = metaName.trim();
+          localStorage.setItem(PROFILE_FULL_NAME_KEY, name);
+          if (mounted) setUserFullName(name);
+        }
+      } catch {
+        // ignore auth fetch errors
+      }
+    };
+
+    loadUserFullName();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userFullName) return;
+    setTransactions((prev) => {
+      if (prev.length === 0) return prev;
+      return applyTransactionMatching(prev, userFullName);
+    });
+  }, [userFullName]);
+
+  useEffect(() => {
+    setTransactions((prev) => {
+      if (prev.length === 0 || accounts.length === 0) return prev;
+      return applyTransactionMatching(prev);
+    });
+  }, [accounts.length]);
+
+  useEffect(() => {
+    if (!quickActionDropdown) return undefined;
+
+    const handleClickOutside = (event) => {
+      if (
+        quickActionsRef.current &&
+        !quickActionsRef.current.contains(event.target)
+      ) {
+        setQuickActionDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [quickActionDropdown]);
 
   const emojiMap = useMemo(() => {
     const map = { ...categoryEmoji };
@@ -654,6 +971,35 @@ export default function DashboardPage() {
     [accounts, selectedAccountId],
   );
 
+  const selectedAccountHasTransactions = accountFilteredTransactions.length > 0;
+  const showAccountEmptyState =
+    Boolean(selectedAccountId) && !selectedAccountHasTransactions;
+
+  const smartStatementSuggestions = useMemo(
+    () =>
+      computeSmartStatementSuggestions(
+        transactions,
+        accounts,
+        userFullName,
+        permanentlyDismissed,
+      ),
+    [transactions, accounts, userFullName, permanentlyDismissed],
+  );
+
+  const suggestionBankKeys = useMemo(
+    () => smartStatementSuggestions.map((item) => item.bank).join("|"),
+    [smartStatementSuggestions],
+  );
+
+  useEffect(() => {
+    const banks = suggestionBankKeys.split("|").filter(Boolean);
+    if (banks.length === 1) {
+      setExpandedSuggestions(new Set([banks[0]]));
+      return;
+    }
+    setExpandedSuggestions(new Set());
+  }, [suggestionBankKeys]);
+
   const availableBulan = useMemo(() => {
     const bulanSet = new Set(
       accountFilteredTransactions
@@ -687,6 +1033,8 @@ export default function DashboardPage() {
 
   const categorySummary = useMemo(() => {
     const grouped = monthFilteredTransactions.reduce((acc, item) => {
+      if (shouldExcludeFromSpending(item.transaction)) return acc;
+
       const kategori = normalizeKategori(item.transaction?.kategori);
       const debit = parseAmount(item.transaction?.debit);
       const kredit = parseAmount(item.transaction?.kredit);
@@ -760,6 +1108,28 @@ export default function DashboardPage() {
     [displayExpenseCategorySummary],
   );
 
+  const moveMoneySummary = useMemo(() => {
+    const seenPairKeys = new Set();
+    let total = 0;
+    let pairCount = 0;
+
+    monthFilteredTransactions.forEach(({ transaction }) => {
+      if (transaction?.matchType !== "move_money") return;
+
+      const pairKey = [transaction.id, transaction.matchedTransactionId]
+        .filter(Boolean)
+        .sort()
+        .join("|");
+      if (seenPairKeys.has(pairKey)) return;
+
+      seenPairKeys.add(pairKey);
+      pairCount += 1;
+      total += parseAmount(transaction?.debit) || parseAmount(transaction?.kredit);
+    });
+
+    return { total, count: pairCount * 2, pairCount };
+  }, [monthFilteredTransactions]);
+
   const accountLookup = useMemo(() => {
     const lookup = new Map();
     accounts.forEach((account) => {
@@ -795,6 +1165,8 @@ export default function DashboardPage() {
     const expenseKeys = new Set();
 
     accountFilteredTransactions.forEach((transaction) => {
+      if (shouldExcludeFromSpending(transaction)) return;
+
       const [day, month, year] = String(transaction?.tanggal || "").split("/");
       if (!day || !month || !year) return;
 
@@ -907,6 +1279,8 @@ export default function DashboardPage() {
     const dates = [];
 
     accountFilteredTransactions.forEach((t) => {
+      if (shouldExcludeFromSpending(t)) return;
+
       const kategori = normalizeKategori(t?.kategori);
       const debit = parseAmount(t?.debit);
       const kredit = parseAmount(t?.kredit);
@@ -937,6 +1311,7 @@ export default function DashboardPage() {
     }
 
     const transaksiTerbesar = [...accountFilteredTransactions]
+      .filter((t) => !shouldExcludeFromSpending(t))
       .map((t) => ({
         tanggal: t?.tanggal,
         deskripsi: t?.deskripsi,
@@ -1259,6 +1634,288 @@ export default function DashboardPage() {
     }
   };
 
+  const toggleAiInsight = () => {
+    setAiInsightExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(
+          AI_INSIGHT_COLLAPSED_KEY,
+          next ? "expanded" : "collapsed",
+        );
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  const getUploadDeleteCount = (entry) => {
+    if (!entry) return 0;
+    return transactions.filter((transaction) => {
+      const kept = removeTransactionsForUploadEntry(entry, [transaction]);
+      return kept.length === 0;
+    }).length;
+  };
+
+  const handleConfirmDeleteUpload = () => {
+    if (!deleteUploadConfirm) return;
+
+    const { entry } = deleteUploadConfirm;
+    const remaining = removeTransactionsForUploadEntry(entry, transactions);
+    localStorage.setItem("parsedTransactions", JSON.stringify(remaining));
+    deleteUploadHistoryEntry(entry.id);
+    setDeleteUploadConfirm(null);
+    loadTransactionsAndInsights();
+    showToast("🗑️ Statement berhasil dihapus");
+  };
+
+  const handleDeleteUploadClick = (entry) => {
+    setQuickActionDropdown(null);
+    setDeleteUploadConfirm({
+      entry,
+      count: getUploadDeleteCount(entry),
+    });
+  };
+
+  const openCreateAccountModal = () => {
+    setCreatedAccountSuccess(null);
+    setFormNama("");
+    setFormTipe("bank");
+    setFormBank(BANK_OPTIONS[0]);
+    setFormWarna("#63B3ED");
+    setShowCreateAccountModal(true);
+    setQuickActionDropdown(null);
+  };
+
+  const closeCreateAccountModal = () => {
+    setShowCreateAccountModal(false);
+    setCreatedAccountSuccess(null);
+  };
+
+  const handleCreateAccountTipeChange = (tipe) => {
+    setFormTipe(tipe);
+    setFormBank(tipe === "cc" ? CC_OPTIONS[0] : BANK_OPTIONS[0]);
+  };
+
+  const handleSaveCreateAccount = () => {
+    const nama = formNama.trim();
+    if (!nama) {
+      alert("Nama akun wajib diisi.");
+      return;
+    }
+    if (!formBank) {
+      alert("Pilih bank.");
+      return;
+    }
+
+    const newAccount = saveAccount({
+      nama,
+      tipe: formTipe,
+      bank: formBank,
+      warna: formWarna,
+    });
+
+    loadTransactionsAndInsights();
+    setCreatedAccountSuccess({
+      id: newAccount.id,
+      nama: newAccount.nama,
+    });
+  };
+
+  const handleCreateAccountUploadNow = () => {
+    if (!createdAccountSuccess) return;
+    router.push(`/upload?accountId=${createdAccountSuccess.id}`);
+  };
+
+  const resolveUploadAccountId = () => {
+    if (selectedAccountId) return selectedAccountId;
+    if (accounts.length === 1) return accounts[0].id;
+    return null;
+  };
+
+  const handleUploadStatementAction = () => {
+    const directAccountId = resolveUploadAccountId();
+    if (directAccountId) {
+      router.push(`/upload?accountId=${directAccountId}`);
+      setQuickActionDropdown(null);
+      return;
+    }
+
+    if (accounts.length === 0) {
+      openCreateAccountModal();
+      return;
+    }
+
+    setQuickActionDropdown((prev) => (prev === "upload" ? null : "upload"));
+  };
+
+  const handleSelectUploadAccount = (accountId) => {
+    setQuickActionDropdown(null);
+    router.push(`/upload?accountId=${accountId}`);
+  };
+
+  const handlePermanentlyDismissSuggestion = (bank) => {
+    setPermanentlyDismissed((prev) => {
+      if (prev.includes(bank)) return prev;
+      const next = [...prev, bank];
+      persistPermanentlyDismissed(next);
+      return next;
+    });
+    setConfirmDismissBank(null);
+  };
+
+  const toggleSuggestionExpanded = (bank) => {
+    setExpandedSuggestions((prev) => {
+      const next = new Set(prev);
+      if (next.has(bank)) {
+        next.delete(bank);
+      } else {
+        next.add(bank);
+      }
+      return next;
+    });
+  };
+
+  const renderSmartSuggestionBanners = () => {
+    if (smartStatementSuggestions.length === 0) return null;
+
+    return (
+      <div className="mt-4 space-y-3">
+        {smartStatementSuggestions.map(({ bank, userName, transactions: matchedTransactions }) => {
+          const isExpanded = expandedSuggestions.has(bank);
+
+          return (
+            <div
+              key={bank}
+              className="overflow-hidden rounded-2xl border transition-colors hover:bg-[rgba(251,191,36,0.11)]"
+              style={{
+                background: "rgba(251,191,36,0.08)",
+                borderColor: "rgba(251,191,36,0.2)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => toggleSuggestionExpanded(bank)}
+                className={`flex w-full cursor-pointer items-start justify-between gap-3 text-left transition ${
+                  isExpanded ? "p-4 pb-0" : "px-4 py-3"
+                }`}
+                aria-expanded={isExpanded}
+              >
+                <p className="text-sm font-semibold leading-relaxed text-[#ECEEF2]">
+                  💡 Kami deteksi transfer ke {bank} atas nama {userName}
+                </p>
+                <span
+                  className={`mt-0.5 shrink-0 text-xs text-[#F6AD55] transition-transform duration-300 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  ▼
+                </span>
+              </button>
+
+              <div
+                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <div className="border-t border-[rgba(255,255,255,0.06)] p-4">
+                    <p className="text-sm leading-relaxed text-[#8B92A5]">
+                      Upload statement {bank} kamu untuk analisa keuangan yang lebih
+                      lengkap.
+                    </p>
+
+                    <div className="mt-4 overflow-x-auto rounded-xl border border-[rgba(255,255,255,0.06)]">
+                      <table className="min-w-full text-left text-[12px]">
+                        <thead className="border-b border-[rgba(255,255,255,0.06)] text-[#8B92A5]">
+                          <tr>
+                            <th className="px-3 py-2 font-semibold">Tanggal</th>
+                            <th className="px-3 py-2 font-semibold">Deskripsi</th>
+                            <th className="px-3 py-2 font-semibold">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[rgba(255,255,255,0.04)]">
+                          {matchedTransactions.map((transaction, index) => {
+                            const amountDisplay = formatAmount(transaction);
+                            return (
+                              <tr key={`${transaction?.tanggal || "trx"}-${index}`}>
+                                <td className="whitespace-nowrap px-3 py-2 text-[#8B92A5]">
+                                  {transaction?.tanggal || "-"}
+                                </td>
+                                <td className="max-w-[200px] truncate px-3 py-2 text-[#ECEEF2] sm:max-w-xs">
+                                  {transaction?.deskripsi || "-"}
+                                </td>
+                                <td className={`px-3 py-2 ${amountDisplay.className}`}>
+                                  {amountDisplay.text}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-4 flex flex-col items-start gap-2">
+                      <Link
+                        href={`/upload?suggestBank=${encodeURIComponent(bank)}`}
+                        className="inline-flex items-center rounded-full bg-[rgba(251,191,36,0.15)] px-4 py-2 text-sm font-semibold text-[#F6AD55] transition hover:bg-[rgba(251,191,36,0.25)]"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        Upload Statement {bank} →
+                      </Link>
+                      {confirmDismissBank === bank ? (
+                        <div className="mt-1 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                          <p className="text-sm text-[#8B92A5]">
+                            Yakin? Suggestion ini tidak akan muncul lagi untuk{" "}
+                            {bank}.
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handlePermanentlyDismissSuggestion(bank);
+                              }}
+                              className="text-sm font-semibold text-[#FC8181] transition hover:text-[#FEB2B2]"
+                            >
+                              Ya, sembunyikan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setConfirmDismissBank(null);
+                              }}
+                              className="text-sm font-semibold text-[#8B92A5] transition hover:text-[#ECEEF2]"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setConfirmDismissBank(bank);
+                          }}
+                          className="text-xs font-medium text-[#8B92A5] transition hover:text-[#ECEEF2]"
+                        >
+                          Ini bukan rekening saya
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   useEffect(() => {
     const messages = [];
 
@@ -1321,6 +1978,15 @@ export default function DashboardPage() {
       localStorage.setItem("parsedTransactions", JSON.stringify(updated));
       return updated;
     });
+  };
+
+  const handleClearMoveMoneyMatch = (originalIndex) => {
+    const target = transactions[originalIndex];
+    if (!target?.id || target.matchType !== "move_money") return;
+
+    const updated = removeMoveMoneyMatch(transactions, target.id);
+    setTransactions(updated);
+    localStorage.setItem("parsedTransactions", JSON.stringify(updated));
   };
 
   const handleCategoryChange = (index, nextCategory, previousCategory) => {
@@ -1670,49 +2336,173 @@ export default function DashboardPage() {
           ) : null}
         </h1>
 
-        <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
-          <button
-            type="button"
-            onClick={() => setSelectedAccountId("")}
-            className={`inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold transition ${
-              !selectedAccountId
-                ? "btn-primary"
-                : "vale-pill-inactive"
-            }`}
-          >
-            Semua Akun
-          </button>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => setSelectedAccountId("")}
+              className={`inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-semibold transition ${
+                !selectedAccountId
+                  ? "btn-primary"
+                  : "vale-pill-inactive"
+              }`}
+            >
+              Semua Akun
+            </button>
 
-          {accounts.map((account) => {
-            const isActive = selectedAccountId === account.id;
-            return (
-              <button
-                key={account.id}
-                type="button"
-                onClick={() => setSelectedAccountId(account.id)}
-                className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
-                  isActive ? "vale-pill-active" : "vale-pill-inactive"
-                }`}
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: account.warna || "#63B3ED" }}
-                  aria-hidden="true"
-                />
-                {account.nama}
-              </button>
-            );
-          })}
+            {accounts.map((account) => {
+              const isActive = selectedAccountId === account.id;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  onClick={() => setSelectedAccountId(account.id)}
+                  className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
+                    isActive ? "vale-pill-active" : "vale-pill-inactive"
+                  }`}
+                >
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: account.warna || "#63B3ED" }}
+                    aria-hidden="true"
+                  />
+                  {account.nama}
+                </button>
+              );
+            })}
 
-          <button
-            type="button"
-            onClick={() => setShowAddAccountModal(true)}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-lg font-semibold text-[#8B92A5] transition hover:border-[#63B3ED] hover:text-[#63B3ED]"
-            aria-label="Tambah akun dan upload statement"
-          >
-            +
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowAddAccountModal(true)}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(255,255,255,0.08)] text-lg font-semibold text-[#8B92A5] transition hover:border-[#63B3ED] hover:text-[#63B3ED]"
+              aria-label="Tambah akun dan upload statement"
+            >
+              +
+            </button>
+          </div>
         </div>
+
+        {showAccountEmptyState ? (
+          <>
+            <div ref={quickActionsRef} className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={handleUploadStatementAction}
+                className="btn-primary inline-flex items-center gap-2 rounded-[10px] px-6 py-3 text-[15px] font-semibold transition"
+              >
+                📄 Upload Statement →
+              </button>
+            </div>
+
+            {renderSmartSuggestionBanners()}
+
+            <section className="vale-card mt-8 flex flex-col items-center justify-center rounded-2xl px-6 py-16 text-center">
+              <span className="text-5xl" aria-hidden="true">
+                📄
+              </span>
+              <h2 className="mt-6 text-xl font-bold text-[#ECEEF2]">
+                Belum ada statement
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-[#8B92A5]">
+                Upload statement {selectedAccount?.bank || "bank"} kamu untuk mulai
+                analisa keuangan
+              </p>
+            </section>
+          </>
+        ) : (
+          <>
+        <div ref={quickActionsRef} className="mt-4 flex flex-wrap gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={handleUploadStatementAction}
+              className={QUICK_ACTION_BUTTON_CLASS}
+            >
+              📄 Upload Statement
+            </button>
+            {quickActionDropdown === "upload" ? (
+              <div className="absolute left-0 top-full z-30 mt-2 min-w-[220px] overflow-hidden rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] py-1 shadow-xl">
+                {accounts.map((account) => (
+                  <button
+                    key={account.id}
+                    type="button"
+                    onClick={() => handleSelectUploadAccount(account.id)}
+                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-[#ECEEF2] transition hover:bg-[rgba(99,179,237,0.08)]"
+                  >
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: account.warna || "#63B3ED" }}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{account.nama}</span>
+                      <span className="block truncate text-xs text-[#8B92A5]">
+                        {account.bank}
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={openCreateAccountModal}
+            className={QUICK_ACTION_BUTTON_CLASS}
+          >
+            🏦 Tambah Akun
+          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() =>
+                setQuickActionDropdown((prev) =>
+                  prev === "delete" ? null : "delete",
+                )
+              }
+              className={QUICK_ACTION_BUTTON_CLASS}
+            >
+              🗑️ Hapus Statement
+            </button>
+            {quickActionDropdown === "delete" ? (
+              <div className="absolute left-0 top-full z-30 mt-2 max-h-72 min-w-[280px] overflow-y-auto rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] py-1 shadow-xl">
+                {uploadHistory.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-[#8B92A5]">
+                    Belum ada statement diupload
+                  </p>
+                ) : (
+                  uploadHistory.map((entry) => {
+                    const account = accountLookup.get(entry.accountId);
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => handleDeleteUploadClick(entry)}
+                        className="flex w-full flex-col px-4 py-2.5 text-left transition hover:bg-[rgba(99,179,237,0.08)]"
+                      >
+                        <span className="truncate text-sm font-semibold text-[#ECEEF2]">
+                          {entry.fileName}
+                        </span>
+                        <span className="mt-0.5 text-xs text-[#8B92A5]">
+                          {entry.dateRange} · {entry.transactionCount} transaksi
+                          {account ? ` · ${account.nama}` : ""}
+                        </span>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <Link href="/accounts" className={QUICK_ACTION_BUTTON_CLASS}>
+            ⚙️ Kelola Akun
+          </Link>
+        </div>
+
+        {renderSmartSuggestionBanners()}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <p className="text-sm font-semibold text-[#63B3ED]">Filter Bulan:</p>
@@ -1731,22 +2521,49 @@ export default function DashboardPage() {
         </div>
 
         {insights.length > 0 && !selectedAccountId ? (
-          <section className="vale-card mt-8 rounded-2xl p-5">
-            <h2 className="text-xl font-bold text-[#63B3ED]">✨ AI Insight</h2>
-            <p className="mt-1 text-sm text-[#8B92A5]">
-              Analisa personal berdasarkan pola spending kamu
-            </p>
-            <ul className="mt-4 space-y-3">
-              {insights.map((insight, index) => (
-                <li
-                  key={`insight-${index}`}
-                  className={`${INSIGHT_VARIANTS[index % INSIGHT_VARIANTS.length]} px-4 py-3 text-sm leading-relaxed text-[#8B92A5]`}
-                >
-                  <span className="mr-2 font-bold text-[#63B3ED]">{index + 1}.</span>
-                  {insight}
-                </li>
-              ))}
-            </ul>
+          <section className="vale-card mt-8 overflow-hidden rounded-2xl">
+            <button
+              type="button"
+              onClick={toggleAiInsight}
+              className="flex w-full items-center justify-between gap-3 p-5 text-left transition hover:bg-[rgba(255,255,255,0.02)]"
+              aria-expanded={aiInsightExpanded}
+            >
+              <h2 className="text-xl font-bold text-[#63B3ED]">✨ AI Insight</h2>
+              <span
+                className={`shrink-0 text-sm text-[#8B92A5] transition-transform duration-300 ${
+                  aiInsightExpanded ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              >
+                ▼
+              </span>
+            </button>
+            <div
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                aiInsightExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="border-t border-[rgba(255,255,255,0.06)] px-5 pb-5 pt-4">
+                  <p className="text-sm text-[#8B92A5]">
+                    Analisa personal berdasarkan pola spending kamu
+                  </p>
+                  <ul className="mt-4 space-y-3">
+                    {insights.map((insight, index) => (
+                      <li
+                        key={`insight-${index}`}
+                        className={`${INSIGHT_VARIANTS[index % INSIGHT_VARIANTS.length]} px-4 py-3 text-sm leading-relaxed text-[#8B92A5]`}
+                      >
+                        <span className="mr-2 font-bold text-[#63B3ED]">
+                          {index + 1}.
+                        </span>
+                        {insight}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
           </section>
         ) : null}
 
@@ -1795,6 +2612,24 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-8">
+            {moveMoneySummary.pairCount > 0 ? (
+              <div
+                className="mb-6 rounded-xl border px-4 py-3"
+                style={{
+                  background: "rgba(139,146,165,0.1)",
+                  borderColor: "rgba(139,146,165,0.2)",
+                }}
+              >
+                <p className="text-sm font-semibold text-[#8B92A5]">
+                  ↔️ Move Money: {formatRupiah(moveMoneySummary.total)}
+                </p>
+                <p className="mt-1 text-xs text-[#8B92A5]">
+                  {moveMoneySummary.count} transaksi antar rekening sendiri tidak
+                  dihitung sebagai pengeluaran
+                </p>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-2xl font-extrabold text-[#68D391]">💰 Pemasukan</h2>
               <p className="text-xl font-bold text-[#68D391]">
@@ -1861,6 +2696,7 @@ export default function DashboardPage() {
                       accounts,
                     );
                     const amountDisplay = formatAmount(transaction);
+                    const isMoveMoney = transaction?.matchType === "move_money";
 
                     return (
                     <tr
@@ -1886,29 +2722,52 @@ export default function DashboardPage() {
                         {amountDisplay.text}
                       </td>
                       <td className="px-4 py-3 text-[#8B92A5]">
-                        <select
-                          value={normalizeKategori(transaction?.kategori)}
-                          onChange={(event) =>
-                            handleCategoryChange(
-                              originalIndex,
-                              event.target.value,
-                              transaction?.kategori,
-                            )
-                          }
-                          className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
-                        >
-                          {(transaction?.jenis === "income"
-                            ? incomeCategoryOptions
-                            : expenseCategoryOptions
-                          ).map((category) => {
-                            const normalizedCategory = normalizeKategori(category);
-                            return (
-                              <option key={normalizedCategory} value={normalizedCategory}>
-                                {emojiMap[normalizedCategory] || "📦"} {normalizedCategory}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        {isMoveMoney ? (
+                          <div className="flex flex-col items-start gap-1.5">
+                            <span
+                              className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-[#8B92A5]"
+                              style={{
+                                background: "rgba(139,146,165,0.1)",
+                                border: "1px solid rgba(139,146,165,0.2)",
+                              }}
+                            >
+                              ↔️ Move Money
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleClearMoveMoneyMatch(originalIndex)
+                              }
+                              className="text-[11px] font-medium text-[#8B92A5] underline-offset-2 transition hover:text-[#ECEEF2] hover:underline"
+                            >
+                              Bukan move money?
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value={normalizeKategori(transaction?.kategori)}
+                            onChange={(event) =>
+                              handleCategoryChange(
+                                originalIndex,
+                                event.target.value,
+                                transaction?.kategori,
+                              )
+                            }
+                            className="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                          >
+                            {(transaction?.jenis === "income"
+                              ? incomeCategoryOptions
+                              : expenseCategoryOptions
+                            ).map((category) => {
+                              const normalizedCategory = normalizeKategori(category);
+                              return (
+                                <option key={normalizedCategory} value={normalizedCategory}>
+                                  {emojiMap[normalizedCategory] || "📦"} {normalizedCategory}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        )}
                       </td>
                       <td
                         ref={isEditingNote ? noteEditorRef : null}
@@ -1944,6 +2803,8 @@ export default function DashboardPage() {
             </table>
           </div>
         </section>
+          </>
+        )}
       </main>
 
       <AddAccountUploadModal
@@ -1951,6 +2812,161 @@ export default function DashboardPage() {
         onClose={() => setShowAddAccountModal(false)}
         onComplete={handleAddAccountModalComplete}
       />
+
+      {showCreateAccountModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="vale-modal w-full max-w-md rounded-2xl p-6 shadow-xl">
+            {createdAccountSuccess ? (
+              <>
+                <p className="text-center text-lg font-semibold leading-relaxed text-[#ECEEF2]">
+                  ✅ Akun {createdAccountSuccess.nama} berhasil ditambahkan!
+                </p>
+                <div className="mt-6 flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCreateAccountUploadNow}
+                    className="btn-primary w-full rounded-full px-4 py-2.5 text-sm font-semibold transition"
+                  >
+                    📄 Upload Statement Sekarang
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (createdAccountSuccess?.id) {
+                        setSelectedAccountId(createdAccountSuccess.id);
+                      }
+                      closeCreateAccountModal();
+                      loadTransactionsAndInsights();
+                    }}
+                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
+                  >
+                    Nanti Saja
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-xl font-bold text-[#63B3ED]">Tambah Akun</h3>
+
+                <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
+                  Nama Akun
+                  <input
+                    type="text"
+                    value={formNama}
+                    onChange={(event) => setFormNama(event.target.value)}
+                    placeholder="Contoh: Jago Utama"
+                    className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm outline-none focus:border-[#63B3ED]"
+                  />
+                </label>
+
+                <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Tipe Akun</p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCreateAccountTipeChange("bank")}
+                    className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                      formTipe === "bank"
+                        ? "vale-toggle-active"
+                        : "vale-toggle-inactive"
+                    }`}
+                  >
+                    🏦 Bank Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateAccountTipeChange("cc")}
+                    className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                      formTipe === "cc"
+                        ? "vale-toggle-active"
+                        : "vale-toggle-inactive"
+                    }`}
+                  >
+                    💳 Credit Card
+                  </button>
+                </div>
+
+                <label className="mt-5 block text-sm font-semibold text-[#8B92A5]">
+                  Bank
+                  <select
+                    value={formBank}
+                    onChange={(event) => setFormBank(event.target.value)}
+                    className="mt-2 w-full rounded-xl px-4 py-2.5 text-sm"
+                  >
+                    {bankOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <p className="mt-5 text-sm font-semibold text-[#8B92A5]">Warna Akun</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {COLOR_OPTIONS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setFormWarna(color)}
+                      className={`h-9 w-9 rounded-full transition ${
+                        formWarna === color
+                          ? "vale-color-selected"
+                          : "hover:scale-105"
+                      }`}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Pilih warna ${color}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveCreateAccount}
+                    className="btn-primary flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeCreateAccountModal}
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {deleteUploadConfirm ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="vale-modal w-full max-w-md rounded-2xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-[#63B3ED]">Hapus Statement?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#8B92A5]">
+              Hapus statement ini? {deleteUploadConfirm.count} transaksi dari periode
+              ini akan dihapus dari dashboard.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmDeleteUpload}
+                className="flex-1 rounded-full bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                Hapus
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteUploadConfirm(null)}
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showAssignAccountModal ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
