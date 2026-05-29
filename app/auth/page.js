@@ -215,7 +215,7 @@ export default function AuthPage() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1E2129] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
+    "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#16281C] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
 
   return (
     <div className="vale-page font-body relative flex min-h-screen flex-col items-center justify-center bg-transparent px-6 py-12">
@@ -239,13 +239,13 @@ export default function AuthPage() {
         </div>
 
         <div className="vale-card mt-8 rounded-2xl border border-[rgba(255,255,255,0.08)] p-6 md:p-8">
-          <div className="flex rounded-xl bg-[#20242E] p-1">
+          <div className="flex rounded-xl bg-[#1C3024] p-1">
             <button
               type="button"
               onClick={() => switchTab("login")}
               className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
                 tab === "login"
-                  ? "bg-[#111318] text-[#ECEEF2] shadow-sm"
+                  ? "bg-[#152A1C] text-[#ECEEF2] shadow-sm"
                   : "text-[#8B92A5] hover:text-[#ECEEF2]"
               }`}
             >
@@ -256,7 +256,7 @@ export default function AuthPage() {
               onClick={() => switchTab("register")}
               className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
                 tab === "register"
-                  ? "bg-[#111318] text-[#ECEEF2] shadow-sm"
+                  ? "bg-[#152A1C] text-[#ECEEF2] shadow-sm"
                   : "text-[#8B92A5] hover:text-[#ECEEF2]"
               }`}
             >

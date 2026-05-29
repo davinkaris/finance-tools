@@ -86,7 +86,7 @@ export default function Navbar() {
   const initials = getUserInitials(user);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(17,19,24,0.85)] backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(13,31,18,0.85)] backdrop-blur-xl">
       <nav className="mx-auto grid h-[72px] w-full max-w-6xl grid-cols-3 items-center px-6 md:px-10">
         <div className="justify-self-start">
           <Link
