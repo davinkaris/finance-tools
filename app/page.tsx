@@ -4,10 +4,10 @@ import RevealInit from "../components/landing/RevealInit";
 function IconUpload() {
   return (
     <div className="relative flex h-7 w-7 flex-col justify-center gap-[5px]">
-      <span className="h-[2px] w-full rounded-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
-      <span className="h-[2px] w-4/5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
-      <span className="h-[2px] w-3/5 rounded-full bg-gradient-to-r from-[#3B82F6] to-[#60A5FA]" />
-      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#06B6D4] shadow-[0_0_8px_#06B6D4]" />
+      <span className="h-[2px] w-full rounded-full bg-gradient-to-r from-[#22C55E] to-[#4ADE80]" />
+      <span className="h-[2px] w-4/5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#4ADE80]" />
+      <span className="h-[2px] w-3/5 rounded-full bg-gradient-to-r from-[#22C55E] to-[#4ADE80]" />
+      <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#14B8A6] shadow-[0_0_8px_#14B8A6]" />
     </div>
   );
 }
@@ -25,8 +25,8 @@ function IconNeural() {
       <line x1="20" y1="19" x2="14" y2="22" stroke="url(#cyanGrad)" strokeWidth="1.2" />
       <defs>
         <linearGradient id="cyanGrad" x1="0" y1="0" x2="28" y2="28">
-          <stop stopColor="#06B6D4" />
-          <stop offset="1" stopColor="#3B82F6" />
+          <stop stopColor="#14B8A6" />
+          <stop offset="1" stopColor="#22C55E" />
         </linearGradient>
       </defs>
     </svg>
@@ -40,7 +40,7 @@ function IconAdvisor() {
         d="M4 8C4 5.79 5.79 4 8 4H16C18.21 4 20 5.79 20 8V14C20 16.21 18.21 18 16 18H10L5 22V18C4.45 18 4 17.55 4 17V8Z"
         stroke="url(#indigoGrad)"
         strokeWidth="1.5"
-        fill="rgba(99,102,241,0.1)"
+        fill="rgba(34,197,94,0.1)"
       />
       <rect x="8" y="10" width="1.5" height="5" rx="0.75" fill="url(#indigoGrad)" />
       <rect x="11" y="8" width="1.5" height="7" rx="0.75" fill="url(#indigoGrad)" />
@@ -48,8 +48,8 @@ function IconAdvisor() {
       <rect x="17" y="7" width="1.5" height="8" rx="0.75" fill="url(#indigoGrad)" />
       <defs>
         <linearGradient id="indigoGrad" x1="4" y1="4" x2="24" y2="24">
-          <stop stopColor="#6366F1" />
-          <stop offset="1" stopColor="#3B82F6" />
+          <stop stopColor="#059669" />
+          <stop offset="1" stopColor="#22C55E" />
         </linearGradient>
       </defs>
     </svg>
@@ -133,19 +133,19 @@ const TESTIMONIALS = [
 
 export default function Home() {
   return (
-    <div className="font-body relative min-h-screen overflow-x-hidden bg-[#050A18] text-[#F8FAFC] selection:bg-[#3B82F6]/30">
+    <div className="font-body relative min-h-screen overflow-x-hidden bg-[#0A1A0F] text-[#F8FAFC] selection:bg-[#22C55E]/30">
       <RevealInit />
 
       {/* Background layers */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div className="orb-1 absolute -left-48 -top-48 h-[800px] w-[800px] rounded-full bg-[#3B82F6] opacity-[0.12] blur-[120px]" />
-        <div className="orb-2 absolute -bottom-32 -right-32 h-[600px] w-[600px] rounded-full bg-[#06B6D4] opacity-[0.08] blur-[100px]" />
-        <div className="orb-3 absolute right-[5%] top-1/3 h-[400px] w-[400px] rounded-full bg-[#6366F1] opacity-10 blur-[80px]" />
+        <div className="orb-1 absolute -left-48 -top-48 h-[800px] w-[800px] rounded-full bg-[#22C55E] opacity-[0.12] blur-[120px]" />
+        <div className="orb-2 absolute -bottom-32 -right-32 h-[600px] w-[600px] rounded-full bg-[#14B8A6] opacity-[0.08] blur-[100px]" />
+        <div className="orb-3 absolute right-[5%] top-1/3 h-[400px] w-[400px] rounded-full bg-[#059669] opacity-10 blur-[80px]" />
         <div className="dot-grid absolute inset-0" />
       </div>
 
       {/* Navbar */}
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-[#050A18]/80 backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.06] bg-[#0A1A0F]/80 backdrop-blur-xl">
         <nav className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-6 md:px-10">
           <Link
             href="/"
@@ -175,8 +175,8 @@ export default function Home() {
         <section className="mx-auto grid min-h-screen max-w-6xl items-center gap-16 px-6 pb-24 pt-[100px] lg:grid-cols-2 lg:px-10">
           <div>
             <div className="reveal flex items-center gap-3">
-              <span className="h-px w-8 bg-[#06B6D4]" />
-              <span className="text-xs font-medium tracking-[0.2em] text-[#06B6D4]">
+              <span className="h-px w-8 bg-[#14B8A6]" />
+              <span className="text-xs font-medium tracking-[0.2em] text-[#14B8A6]">
                 PERSONAL FINANCE AI
               </span>
             </div>
@@ -219,18 +219,18 @@ export default function Home() {
           {/* Hero mockup */}
           <div className="reveal reveal-delay-2 relative mx-auto w-full max-w-[520px] lg:mx-0">
             <div
-              className="hero-mockup relative w-full rounded-3xl border border-[rgba(59,130,246,0.2)] p-6 backdrop-blur-[20px]"
+              className="hero-mockup relative w-full rounded-3xl border border-[rgba(34,197,94,0.2)] p-6 backdrop-blur-[20px]"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(6,182,212,0.05))",
+                  "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(20,184,166,0.05))",
                 boxShadow:
-                  "0 0 0 1px rgba(59,130,246,0.1), 0 40px 80px -20px rgba(0,0,0,0.8), 0 0 60px -10px rgba(59,130,246,0.15)",
+                  "0 0 0 1px rgba(34,197,94,0.1), 0 40px 80px -20px rgba(0,0,0,0.8), 0 0 60px -10px rgba(34,197,94,0.15)",
                 minHeight: "320px",
               }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#06B6D4] text-xs font-bold text-white">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#22C55E] to-[#14B8A6] text-xs font-bold text-white">
                     DK
                   </div>
                   <div>
@@ -258,7 +258,7 @@ export default function Home() {
                     </p>
                     <p className="mt-0.5 text-[11px] font-semibold text-[#F8FAFC]">{m.value}</p>
                     {m.delta && (
-                      <p className="text-[9px] text-[#06B6D4]">{m.delta}</p>
+                      <p className="text-[9px] text-[#14B8A6]">{m.delta}</p>
                     )}
                   </div>
                 ))}
@@ -270,7 +270,7 @@ export default function Home() {
                   {[45, 72, 58, 88, 52, 78].map((h, i) => (
                     <div
                       key={i}
-                      className="w-full max-w-[32px] rounded-t-md bg-gradient-to-t from-[#3B82F6] to-[#06B6D4]"
+                      className="w-full max-w-[32px] rounded-t-md bg-gradient-to-t from-[#22C55E] to-[#14B8A6]"
                       style={{ height: `${h}%` }}
                     />
                   ))}
@@ -279,15 +279,15 @@ export default function Home() {
             </div>
 
             {/* Floating cards */}
-            <div className="float-card-a absolute -left-6 top-4 z-10 max-w-[200px] rounded-2xl border border-[rgba(6,182,212,0.3)] bg-white/[0.06] p-4 backdrop-blur-xl md:-left-12 md:max-w-[220px]">
-              <p className="text-xs font-semibold text-[#06B6D4]">🔍 AI Insight</p>
+            <div className="float-card-a absolute -left-6 top-4 z-10 max-w-[200px] rounded-2xl border border-[rgba(20,184,166,0.3)] bg-white/[0.06] p-4 backdrop-blur-xl md:-left-12 md:max-w-[220px]">
+              <p className="text-xs font-semibold text-[#14B8A6]">🔍 AI Insight</p>
               <p className="mt-1 text-sm leading-snug text-[#94A3B8]">
                 F&amp;B spending naik 23% bulan ini
               </p>
             </div>
 
             <div className="float-card-b absolute -right-6 bottom-4 z-10 max-w-[200px] rounded-2xl border border-white/[0.08] bg-white/[0.06] p-4 backdrop-blur-xl md:-right-12 md:max-w-[220px]">
-              <p className="text-xs font-semibold text-[#3B82F6]">✅ Transfer terdeteksi</p>
+              <p className="text-xs font-semibold text-[#22C55E]">✅ Transfer terdeteksi</p>
               <p className="mt-1 text-sm leading-snug text-[#94A3B8]">
                 Rp 5jt → BCA dicocokkan
               </p>
@@ -334,7 +334,7 @@ export default function Home() {
                 key={f.title}
                 className={`reveal feature-card group ${["reveal-delay-1", "reveal-delay-2", "reveal-delay-3"][i]}`}
               >
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(59,130,246,0.1)]">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[rgba(34,197,94,0.1)]">
                   {f.icon}
                 </div>
                 <h3 className="mt-6 text-lg font-semibold text-[#F8FAFC]">{f.title}</h3>
@@ -352,7 +352,7 @@ export default function Home() {
 
           <div className="relative">
             <div
-              className="timeline-line absolute bottom-8 left-[39px] top-8 hidden w-px origin-top border-l-2 border-dashed border-[rgba(59,130,246,0.3)] md:block"
+              className="timeline-line absolute bottom-8 left-[39px] top-8 hidden w-px origin-top border-l-2 border-dashed border-[rgba(34,197,94,0.3)] md:block"
               aria-hidden="true"
             />
 
@@ -368,7 +368,7 @@ export default function Home() {
                   >
                     {step.num}
                   </span>
-                  <div className="relative z-10 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-[rgba(59,130,246,0.2)] bg-white/[0.03] backdrop-blur-xl">
+                  <div className="relative z-10 flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-[rgba(34,197,94,0.2)] bg-white/[0.03] backdrop-blur-xl">
                     <span className="font-serif-display text-3xl text-gradient">{step.num}</span>
                   </div>
                   <div className="relative z-10 flex-1 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-6 backdrop-blur-xl">
@@ -400,7 +400,7 @@ export default function Home() {
                   &ldquo;{t.quote}&rdquo;
                 </p>
                 <div className="mt-6 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#06B6D4] text-xs font-bold text-white">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#22C55E] to-[#14B8A6] text-xs font-bold text-white">
                     {t.initials}
                   </div>
                   <div>
@@ -421,7 +421,7 @@ export default function Home() {
               aria-hidden="true"
             />
             <div
-              className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-[#06B6D4]/20 blur-2xl"
+              className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-[#14B8A6]/20 blur-2xl"
               aria-hidden="true"
             />
             <div className="relative">
@@ -434,7 +434,7 @@ export default function Home() {
               </p>
               <Link
                 href="/auth"
-                className="mt-8 inline-flex items-center rounded-full bg-white px-10 py-4 text-sm font-semibold text-[#050A18] transition hover:bg-white/90 hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]"
+                className="mt-8 inline-flex items-center rounded-full bg-white px-10 py-4 text-sm font-semibold text-[#0A1A0F] transition hover:bg-white/90 hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]"
               >
                 Mulai Gratis Sekarang
               </Link>

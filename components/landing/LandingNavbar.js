@@ -17,8 +17,8 @@ export default function LandingNavbar() {
     <header
       className={`fixed inset-x-0 top-0 z-50 border-b transition-all duration-300 ${
         scrolled
-          ? "border-white/[0.12] bg-[#0A0A0A]/85 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
-          : "border-white/[0.08] bg-[#0A0A0A]/50 backdrop-blur-xl"
+          ? "border-white/[0.12] bg-[#0A1A0F]/85 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl"
+          : "border-white/[0.08] bg-[#0A1A0F]/50 backdrop-blur-xl"
       }`}
     >
       <nav className="mx-auto flex h-[60px] max-w-6xl items-center justify-between px-6 md:px-10">
