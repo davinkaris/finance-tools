@@ -417,7 +417,7 @@ function UploadPageContent() {
                   if (createAccountError) setCreateAccountError("");
                 }}
                 placeholder="contoh: BCA Utama"
-                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-4 py-2.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
               />
             </label>
 
@@ -429,7 +429,7 @@ function UploadPageContent() {
                   setNewAccountBank(event.target.value);
                   if (createAccountError) setCreateAccountError("");
                 }}
-                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-4 py-2.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                className="mt-2 w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
               >
                 {BANK_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -472,7 +472,7 @@ function UploadPageContent() {
               <button
                 type="button"
                 onClick={handleCancelCreateAccount}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -763,7 +763,7 @@ function UploadPageContent() {
                     type="button"
                     onClick={handleRemoveFile}
                     disabled={isLoading}
-                    className="shrink-0 rounded-full px-1.5 text-[#8B92A5] transition hover:bg-[#1C3024] hover:text-[#ECEEF2] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="shrink-0 rounded-full px-1.5 text-[#8B92A5] transition hover:bg-[#20242E] hover:text-[#ECEEF2] disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Hapus file"
                   >
                     ✕
@@ -857,7 +857,7 @@ function UploadPageContent() {
             className={`mt-8 inline-flex items-center rounded-full px-7 py-3.5 text-base font-semibold transition ${
               canAnalyze
                 ? "btn-primary"
-                : "cursor-not-allowed bg-[#1C3024] text-[#8B92A5]"
+                : "cursor-not-allowed bg-[#20242E] text-[#8B92A5]"
             }`}
           >
             {isLoading ? "Sedang menganalisa..." : "Analisa Sekarang"}

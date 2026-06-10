@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base: #0d1f12;
-  --bg-elevated: #152a1c;
-  --bg-subtle: #1c3024;
-  --bg-input: #16281c;
+  --bg-base: #0a0f1e;
+  --bg-elevated: #1a1d25;
+  --bg-subtle: #20242e;
+  --bg-input: #1e2129;
 
   --text-primary: #eceef2;
   --text-secondary: #8b92a5;
@@ -27,10 +27,10 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
 
-  --glass-bg: rgba(13, 31, 18, 0.85);
-  --glass-bg-hover: rgba(13, 31, 18, 0.9);
-  --glass-bg-solid: rgba(13, 31, 18, 0.95);
-  --glass-sidebar-bg: rgba(10, 26, 15, 0.95);
+  --glass-bg: rgba(17, 19, 24, 0.85);
+  --glass-bg-hover: rgba(17, 19, 24, 0.9);
+  --glass-bg-solid: rgba(17, 19, 24, 0.95);
+  --glass-sidebar-bg: rgba(13, 17, 23, 0.95);
   --glass-blur: blur(40px);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-hover: rgba(255, 255, 255, 0.12);
@@ -60,16 +60,16 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-base);
+  background: #0a0f1e;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a4032;
+  background: #2d3340;
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a5040;
+  background: #3d4455;
 }
 
 .font-serif-display {
@@ -259,7 +259,7 @@ button {
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 select,
 textarea {
-  background: var(--bg-input);
+  background: #1e2129;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 8px 12px;
@@ -280,14 +280,14 @@ textarea:focus {
 }
 
 select option {
-  background: var(--bg-input);
+  background: #1e2129;
   color: #eceef2;
 }
 
 html,
 body {
   min-height: 100%;
-  background-color: var(--bg-base);
+  background-color: #0a0f1e;
 }
 
 @keyframes float {
@@ -309,7 +309,7 @@ body {
   z-index: -1;
   overflow: hidden;
   pointer-events: none;
-  background-color: var(--bg-base);
+  background-color: #0a0f1e;
 }
 
 .bg-orbs__orb {
@@ -381,7 +381,7 @@ body {
 }
 
 .vale-card {
-  background: var(--bg-elevated);
+  background: #1a1d25;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-sm);
 }
@@ -554,7 +554,7 @@ body {
 }
 
 .vale-page > header {
-  background: rgba(10, 26, 15, 0.8) !important;
+  background: rgba(10, 14, 26, 0.8) !important;
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
@@ -566,7 +566,7 @@ body {
 
 .vale-card-hover:hover {
   border-color: rgba(99, 179, 237, 0.25);
-  background: var(--bg-input);
+  background: #1e2129;
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
@@ -579,7 +579,7 @@ body {
 }
 
 .vale-pill-inactive {
-  background: var(--bg-elevated);
+  background: #1a1d25;
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #8b92a5;
 }
@@ -617,7 +617,7 @@ body {
 }
 
 .vale-table-header {
-  background: var(--bg-subtle);
+  background: #20242e;
   color: #8b92a5;
   font-size: 11px;
   font-weight: 600;
@@ -626,7 +626,7 @@ body {
 }
 
 .vale-progress-track {
-  background: var(--bg-subtle);
+  background: #20242e;
 }
 
 .vale-progress-bar {
@@ -634,7 +634,7 @@ body {
 }
 
 .vale-upload-box {
-  background: var(--bg-elevated);
+  background: #1a1d25;
   border: 2px dashed rgba(255, 255, 255, 0.12);
   border-radius: 20px;
   color: #8b92a5;
@@ -653,7 +653,7 @@ body {
 
 .vale-color-selected {
   box-shadow:
-    0 0 0 2px var(--bg-elevated),
+    0 0 0 2px #1a1d25,
     0 0 0 4px #63b3ed,
     0 0 12px rgba(99, 179, 237, 0.35);
 }

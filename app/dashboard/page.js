@@ -282,7 +282,7 @@ const formatYAxisRupiah = (value) => {
 const GLASS_CARD_CLASS = "glass-card rounded-2xl";
 
 const GLASS_TOOLTIP_STYLE = {
-  background: "rgba(13, 31, 18, 0.95)",
+  background: "rgba(17, 19, 24, 0.95)",
   backdropFilter: "blur(40px)",
   WebkitBackdropFilter: "blur(40px)",
   border: "1px solid rgba(255, 255, 255, 0.08)",
@@ -879,7 +879,7 @@ function CategoryInlineEditor({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Cari kategori..."
-              className="w-full rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-3 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+              className="w-full rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-3 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
               autoFocus
             />
           </div>
@@ -920,7 +920,7 @@ function CategoryInlineEditor({
                   type="text"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-2 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
+                  className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1.5 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]"
                 />
                 <button
                   type="button"
@@ -969,7 +969,7 @@ function DrawerTransactionNotesBar({
             onCancel();
           }
         }}
-        className="note-input-enter w-full cursor-text rounded-lg border border-[#63B3ED] bg-[#152A1C] px-3 py-1.5 text-xs text-[#ECEEF2] outline-none shadow-[0_0_0_3px_rgba(99,179,237,0.1)]"
+        className="note-input-enter w-full cursor-text rounded-lg border border-[#63B3ED] bg-[#1A1D25] px-3 py-1.5 text-xs text-[#ECEEF2] outline-none shadow-[0_0_0_3px_rgba(99,179,237,0.1)]"
       />
     );
   }
@@ -1030,7 +1030,7 @@ function TransactionNoteCell({
           }
         }}
         placeholder="Tambah catatan..."
-        className="note-input-enter w-full min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-2 py-1 text-sm italic text-[#8B92A5] outline-none focus:border-[#63B3ED] focus:ring-1 focus:ring-[#63B3ED]"
+        className="note-input-enter w-full min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-2 py-1 text-sm italic text-[#8B92A5] outline-none focus:border-[#63B3ED] focus:ring-1 focus:ring-[#63B3ED]"
       />
     );
   }
@@ -3373,7 +3373,7 @@ function DashboardPageContent() {
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-3 py-1.5 text-xs font-semibold text-[#8B92A5] outline-none transition focus:border-[#63B3ED]"
+      className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-3 py-1.5 text-xs font-semibold text-[#8B92A5] outline-none transition focus:border-[#63B3ED]"
       aria-label="Urutkan kategori"
     >
       <option value="largest">Urutkan: Terbesar ↓</option>
@@ -3429,7 +3429,7 @@ function DashboardPageContent() {
               className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                 newCategoryType === "income"
                   ? "btn-primary"
-                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
               }`}
             >
               💰 Income
@@ -3440,7 +3440,7 @@ function DashboardPageContent() {
               className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                 newCategoryType === "expense"
                   ? "btn-primary"
-                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                  : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
               }`}
             >
               💸 Expense
@@ -3476,7 +3476,7 @@ function DashboardPageContent() {
             <button
               type="button"
               onClick={closeInlineAddCategory}
-              className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+              className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
             >
               Batal
             </button>
@@ -3530,7 +3530,7 @@ function DashboardPageContent() {
 
         {isConfirmingDelete ? (
           <div
-            className="absolute inset-0 z-10 flex flex-col justify-center rounded-2xl bg-[rgba(10,26,15,0.95)] p-4 backdrop-blur-sm"
+            className="absolute inset-0 z-10 flex flex-col justify-center rounded-2xl bg-[rgba(13,17,23,0.95)] p-4 backdrop-blur-sm"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
@@ -3688,7 +3688,7 @@ function DashboardPageContent() {
           className="fixed inset-0 z-[55] bg-black/40"
         />
         <aside
-          className="category-drawer-panel fixed inset-y-0 right-0 z-[60] flex w-full max-w-[480px] flex-col border-l border-[rgba(255,255,255,0.1)] bg-[#0A1A0F] shadow-[-8px_0_32px_rgba(0,0,0,0.5)]"
+          className="category-drawer-panel fixed inset-y-0 right-0 z-[60] flex w-full max-w-[480px] flex-col border-l border-[rgba(255,255,255,0.1)] bg-[#0D1117] shadow-[-8px_0_32px_rgba(0,0,0,0.5)]"
           aria-label={`Detail kategori ${categoryDrawerCategory}`}
         >
           <div className="border-b border-[rgba(255,255,255,0.08)] px-5 py-4">
@@ -3987,7 +3987,7 @@ function DashboardPageContent() {
                   <select
                     value={selectedBulan}
                     onChange={(event) => setSelectedBulan(event.target.value)}
-                    className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#152A1C] px-4 py-2 text-sm font-semibold text-[#ECEEF2] outline-none transition focus:border-[#63B3ED]"
+                    className="rounded-full border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] px-4 py-2 text-sm font-semibold text-[#ECEEF2] outline-none transition focus:border-[#63B3ED]"
                   >
                     <option value="">Semua Bulan</option>
                     {availableBulan.map((bulan) => (
@@ -4230,7 +4230,7 @@ function DashboardPageContent() {
                       closeCreateAccountModal();
                       void refreshDashboardData();
                     }}
-                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Nanti Saja
                   </button>
@@ -4321,7 +4321,7 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     onClick={closeCreateAccountModal}
-                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -4351,7 +4351,7 @@ function DashboardPageContent() {
               <button
                 type="button"
                 onClick={() => setDeleteUploadConfirm(null)}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -4397,7 +4397,7 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     onClick={() => setShowAssignAccountModal(false)}
-                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -4411,7 +4411,7 @@ function DashboardPageContent() {
                 <button
                   type="button"
                   onClick={() => setShowAssignAccountModal(false)}
-                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Tutup
                 </button>
@@ -4448,7 +4448,7 @@ function DashboardPageContent() {
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   newCategoryType === "income"
                     ? "btn-primary"
-                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💰 Pemasukan
@@ -4459,7 +4459,7 @@ function DashboardPageContent() {
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   newCategoryType === "expense"
                     ? "btn-primary"
-                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💸 Pengeluaran
@@ -4495,7 +4495,7 @@ function DashboardPageContent() {
               <button
                 type="button"
                 onClick={closeCategoryModal}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -4530,7 +4530,7 @@ function DashboardPageContent() {
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   editCategoryType === "income"
                     ? "btn-primary"
-                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💰 Pemasukan
@@ -4541,7 +4541,7 @@ function DashboardPageContent() {
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   editCategoryType === "expense"
                     ? "btn-primary"
-                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                    : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                 }`}
               >
                 💸 Pengeluaran
@@ -4577,7 +4577,7 @@ function DashboardPageContent() {
               <button
                 type="button"
                 onClick={closeEditCategoryModal}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -4597,7 +4597,7 @@ function DashboardPageContent() {
               {categoryTypeWarningTransactions.length} transaksi. Tolong pindahkan
               semua transaksi ke kategori lain sebelum mengganti jenisnya.
             </p>
-            <ul className="mt-4 space-y-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1C3024] p-3 text-sm">
+            <ul className="mt-4 space-y-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#20242E] p-3 text-sm">
               {categoryTypeWarningTransactions.slice(0, 5).map((transaction, index) => {
                 const debit = parseAmount(transaction?.debit);
                 const kredit = parseAmount(transaction?.kredit);
@@ -4656,7 +4656,7 @@ function DashboardPageContent() {
                   className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                     rulesSettingsTab === "category"
                       ? "btn-primary"
-                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                   }`}
                 >
                   Aturan Kategori
@@ -4667,7 +4667,7 @@ function DashboardPageContent() {
                   className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                     rulesSettingsTab === "notes"
                       ? "btn-primary"
-                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#1C3024]"
+                      : "border border-[rgba(255,255,255,0.08)] text-[#8B92A5] hover:bg-[#20242E]"
                   }`}
                 >
                   Aturan Notes
@@ -4682,7 +4682,7 @@ function DashboardPageContent() {
                     {savedCategoryRules.map((rule) => (
                       <li
                         key={`${rule.keyword}-${rule.createdAt || rule.kategori}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#1C3024]"
+                        className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#20242E]"
                       >
                         <span className="min-w-0 flex-1 text-sm text-[#ECEEF2]">
                           {rule.keyword} → {rule.kategori}
@@ -4709,7 +4709,7 @@ function DashboardPageContent() {
                   {savedNotesRules.map((rule) => (
                     <li
                       key={`${rule.keyword}-${rule.createdAt || rule.notes}`}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#1C3024]"
+                      className="flex items-center justify-between gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] px-4 py-3 transition hover:bg-[#20242E]"
                     >
                       <span className="min-w-0 flex-1 text-sm text-[#ECEEF2]">
                         {rule.keyword} → &apos;{rule.notes}&apos;
@@ -4737,7 +4737,7 @@ function DashboardPageContent() {
               <button
                 type="button"
                 onClick={() => setShowCategoryRulesModal(false)}
-                className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Tutup
               </button>
@@ -4759,7 +4759,7 @@ function DashboardPageContent() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-3">
-              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#1C3024]">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]">
                 <input
                   type="checkbox"
                   checked={
@@ -4785,7 +4785,7 @@ function DashboardPageContent() {
                   return (
                     <label
                       key={transactionIndex}
-                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#1C3024]"
+                      className="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-2.5 transition hover:bg-[#20242E]"
                     >
                       <input
                         type="checkbox"
@@ -4831,14 +4831,14 @@ function DashboardPageContent() {
                 <button
                   type="button"
                   onClick={handleApplyThisNoteOnly}
-                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Transaksi Ini Saja
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelNotesRule}
-                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                  className="rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Batal
                 </button>
@@ -4867,7 +4867,7 @@ function DashboardPageContent() {
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
         {isChatOpen ? (
           <div className="glass-panel flex h-[500px] w-[380px] flex-col overflow-hidden rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
-            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#1C3024] px-4 py-3">
+            <div className="flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] bg-[#20242E] px-4 py-3">
               <div>
                 <p className="font-semibold text-[#ECEEF2]">💰 Financial Advisor</p>
                 <p className="text-xs text-[#8B92A5]">
@@ -4884,7 +4884,7 @@ function DashboardPageContent() {
               </button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto bg-[#152A1C] p-4">
+            <div className="flex-1 space-y-3 overflow-y-auto bg-[#1A1D25] p-4">
               {chatMessages.map((msg, index) => (
                 <div
                   key={`chat-${index}`}
@@ -4894,7 +4894,7 @@ function DashboardPageContent() {
                     className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
                       msg.role === "user"
                         ? "bg-[#63B3ED] text-[#111318] font-medium"
-                        : "bg-[#1C3024] text-[#ECEEF2]"
+                        : "bg-[#20242E] text-[#ECEEF2]"
                     }`}
                   >
                     {msg.content}
@@ -4903,7 +4903,7 @@ function DashboardPageContent() {
               ))}
               {isChatLoading ? (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl bg-[#1C3024] px-3 py-2 text-sm text-[#8B92A5]">
+                  <div className="rounded-2xl bg-[#20242E] px-3 py-2 text-sm text-[#8B92A5]">
                     Sedang mengetik...
                   </div>
                 </div>
@@ -4916,7 +4916,7 @@ function DashboardPageContent() {
               <div ref={chatEndRef} />
             </div>
 
-            <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#152A1C] p-3">
+            <div className="border-t border-[rgba(255,255,255,0.08)] bg-[#1A1D25] p-3">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4929,7 +4929,7 @@ function DashboardPageContent() {
                   placeholder={
                     isChatLimitReached ? "Batas chat tercapai" : "Tanya tentang keuanganmu..."
                   }
-                  className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm outline-none focus:border-[#63B3ED] disabled:bg-[#1C3024]"
+                  className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2 text-sm outline-none focus:border-[#63B3ED] disabled:bg-[#20242E]"
                 />
                 <button
                   type="button"

@@ -81,7 +81,7 @@ function StepIndicator({ currentStep }) {
                   ? "bg-[#10b981] text-white"
                   : isActive
                     ? "btn-primary"
-                    : "bg-[#1C3024] text-[#8B92A5]"
+                    : "bg-[#20242E] text-[#8B92A5]"
               }`}
             >
               {step}
@@ -321,7 +321,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
           <button
             type="button"
             onClick={handleClose}
-            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-[#8B92A5] transition hover:bg-[#1C3024] hover:text-[#8B92A5]"
+            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-[#8B92A5] transition hover:bg-[#20242E] hover:text-[#8B92A5]"
             aria-label="Tutup modal"
           >
             ×
@@ -488,7 +488,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
               className={`mt-4 w-full rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                 canUpload
                   ? "btn-primary hover:bg-[#63B3ED]"
-                  : "cursor-not-allowed bg-[#1C3024] text-[#8B92A5]"
+                  : "cursor-not-allowed bg-[#20242E] text-[#8B92A5]"
               }`}
             >
               {isUploading ? "Sedang menganalisa..." : "Upload & Analisa"}
@@ -498,7 +498,7 @@ export default function AddAccountUploadModal({ isOpen, onClose, onComplete }) {
               type="button"
               onClick={handleSkipUpload}
               disabled={isUploading}
-              className="mt-3 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Lewati, Upload Nanti
             </button>

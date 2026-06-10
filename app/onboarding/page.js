@@ -28,10 +28,10 @@ import {
 } from "../../lib/transactionsStore";
 
 const inputClass =
-  "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#16281C] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
+  "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1E2129] px-4 py-3 text-sm text-[#ECEEF2] outline-none transition placeholder:text-[#555D6E] focus:border-[#63B3ED]";
 
 const selectClass =
-  "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#16281C] px-3 py-3 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]";
+  "w-full rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1E2129] px-3 py-3 text-sm text-[#ECEEF2] outline-none focus:border-[#63B3ED]";
 
 function StepIndicator({ step }) {
   const steps = [1, 2, 3];
@@ -49,7 +49,7 @@ function StepIndicator({ step }) {
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition ${
                   isActive
                     ? "bg-[#63B3ED] text-[#111318]"
-                    : "border border-[rgba(255,255,255,0.12)] bg-[#1C3024] text-[#8B92A5]"
+                    : "border border-[rgba(255,255,255,0.12)] bg-[#20242E] text-[#8B92A5]"
                 }`}
               >
                 {item}
@@ -325,7 +325,7 @@ export default function OnboardingPage() {
           </span>
         </div>
 
-        <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#152A1C] p-6 sm:p-8">
+        <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[#1A1D25] p-6 sm:p-8">
           <StepIndicator step={step} />
 
           {error ? (
@@ -405,7 +405,7 @@ export default function OnboardingPage() {
                 <span className="block text-sm font-medium text-[#8B92A5]">
                   Jenis Kelamin
                 </span>
-                <div className="mt-2 flex rounded-xl bg-[#1C3024] p-1">
+                <div className="mt-2 flex rounded-xl bg-[#20242E] p-1">
                   {["Laki-laki", "Perempuan"].map((option) => (
                     <button
                       key={option}
@@ -413,7 +413,7 @@ export default function OnboardingPage() {
                       onClick={() => setGender(option)}
                       className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition ${
                         gender === option
-                          ? "bg-[#152A1C] text-[#ECEEF2]"
+                          ? "bg-[#111318] text-[#ECEEF2]"
                           : "text-[#8B92A5] hover:text-[#ECEEF2]"
                       }`}
                     >
@@ -505,7 +505,7 @@ export default function OnboardingPage() {
                             : "border-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.12)]"
                         }`}
                       >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1C3024] text-xs font-bold text-[#63B3ED]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#20242E] text-xs font-bold text-[#63B3ED]">
                           {getBankInitials(bank)}
                         </span>
                         <span className="mt-2 text-center text-[11px] leading-tight text-[#8B92A5]">
@@ -530,7 +530,7 @@ export default function OnboardingPage() {
                       aria-label={`Warna ${color}`}
                       className={`h-9 w-9 rounded-full transition ${
                         selectedColor === color
-                          ? "ring-2 ring-[#63B3ED] ring-offset-2 ring-offset-[#152A1C]"
+                          ? "ring-2 ring-[#63B3ED] ring-offset-2 ring-offset-[#1A1D25]"
                           : ""
                       }`}
                       style={{ backgroundColor: color }}

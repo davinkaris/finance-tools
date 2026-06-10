@@ -393,7 +393,7 @@ export default function AccountsPage() {
                           <p className="truncate text-lg font-bold text-[#ECEEF2]">
                             {account.nama}
                           </p>
-                          <span className="mt-2 inline-flex rounded-full bg-[#1C3024] px-3 py-1 text-xs font-semibold text-[#8B92A5]">
+                          <span className="mt-2 inline-flex rounded-full bg-[#20242E] px-3 py-1 text-xs font-semibold text-[#8B92A5]">
                             {account.tipe === "cc" ? "💳 Credit Card" : "🏦 Bank Account"}
                           </span>
                           <p className="mt-2 text-sm text-[#8B92A5]">{account.bank}</p>
@@ -405,7 +405,7 @@ export default function AccountsPage() {
                           <button
                             type="button"
                             onClick={() => openEditModal(account)}
-                            className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-[#1C3024]"
+                            className="rounded-full border border-[rgba(255,255,255,0.08)] px-2.5 py-1.5 text-sm transition hover:bg-[#20242E]"
                             aria-label={`Edit ${account.nama}`}
                           >
                             ✏️
@@ -434,7 +434,7 @@ export default function AccountsPage() {
                             {accountUploads.map((entry) => (
                               <li
                                 key={entry.id}
-                                className="flex items-start gap-2 rounded-xl bg-[#152A1C]/[0.04] px-3 py-2.5"
+                                className="flex items-start gap-2 rounded-xl bg-[#1A1D25]/[0.04] px-3 py-2.5"
                               >
                                 <div className="min-w-0 flex-1">
                                   <p className="truncate text-sm font-medium text-[#ECEEF2]">
@@ -576,7 +576,7 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Nanti Saja
                   </button>
@@ -669,7 +669,7 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -736,7 +736,7 @@ export default function AccountsPage() {
                       setLinkModalGroup(null);
                       setLinkAccountId("");
                     }}
-                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                    className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                   >
                     Batal
                   </button>
@@ -750,7 +750,7 @@ export default function AccountsPage() {
                 <button
                   type="button"
                   onClick={() => setLinkModalGroup(null)}
-                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                  className="mt-6 w-full rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
                 >
                   Tutup
                 </button>
@@ -779,7 +779,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteUnlinkedConfirm(null)}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -807,7 +807,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteUploadConfirm(null)}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
@@ -835,7 +835,7 @@ export default function AccountsPage() {
               <button
                 type="button"
                 onClick={() => setDeleteConfirm(null)}
-                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#1C3024]"
+                className="flex-1 rounded-full border border-[rgba(255,255,255,0.08)] px-4 py-2.5 text-sm font-semibold text-[#8B92A5] transition hover:bg-[#20242E]"
               >
                 Batal
               </button>
