@@ -43,6 +43,30 @@ export default function Sidebar() {
   const router = useRouter();
   const [userFullName, setUserFullName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("valeTheme");
+      if (stored === "light") setTheme("light");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const applyTheme = (nextTheme) => {
+    setTheme(nextTheme);
+    try {
+      localStorage.setItem("valeTheme", nextTheme);
+    } catch {
+      // ignore
+    }
+    if (nextTheme === "light") {
+      document.documentElement.dataset.theme = "light";
+    } else {
+      delete document.documentElement.dataset.theme;
+    }
+  };
 
   const isDashboardActive =
     pathname === "/dashboard" ||
@@ -134,6 +158,32 @@ export default function Sidebar() {
           <span aria-hidden="true">⚙️</span>
           Pengaturan
         </button>
+
+        <div className="mt-2 px-3 pt-2">
+          <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#555D6E]">
+            Tampilan
+          </p>
+          <div className="flex gap-1 rounded-lg border border-[rgba(255,255,255,0.08)] p-1">
+            <button
+              type="button"
+              onClick={() => applyTheme("light")}
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${
+                theme === "light" ? "vale-toggle-active" : "vale-toggle-inactive"
+              }`}
+            >
+              ☀️ Terang
+            </button>
+            <button
+              type="button"
+              onClick={() => applyTheme("dark")}
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${
+                theme === "dark" ? "vale-toggle-active" : "vale-toggle-inactive"
+              }`}
+            >
+              🌙 Gelap
+            </button>
+          </div>
+        </div>
       </nav>
 
       <div className="border-t border-[rgba(255,255,255,0.06)] p-4">

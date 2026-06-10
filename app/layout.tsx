@@ -43,6 +43,13 @@ export default function RootLayout({
       lang="id"
       className={`${geistSans.variable} ${geistMono.variable} ${plusJakarta.variable} ${playfair.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem("valeTheme")==="light")document.documentElement.dataset.theme="light"}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="font-body relative flex min-h-full flex-col bg-transparent text-[#ECEEF2]">
         <BackgroundLayer />
         <AppShell>{children}</AppShell>
